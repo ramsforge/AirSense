@@ -7,7 +7,7 @@ class DPad extends StatefulWidget {
 
   const DPad({
     super.key,
-    this.size = 130,
+    this.size = 154,
     required this.onButtonChange,
   });
 
@@ -108,8 +108,8 @@ class _DPadState extends State<DPad> {
 
   @override
   Widget build(BuildContext context) {
-    const armWidth = 44.0;
-    const armLength = 48.0;
+    const armWidth = 50.0;
+    const armLength = 54.0;
 
     return SizedBox(
       width: widget.size,
@@ -143,7 +143,7 @@ class _DPadState extends State<DPad> {
                 icon: Icons.keyboard_arrow_up,
                 isPressed: _upPressed,
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(9)),
+                    const BorderRadius.vertical(top: Radius.circular(10)),
               ),
             ),
 
@@ -156,7 +156,7 @@ class _DPadState extends State<DPad> {
                 icon: Icons.keyboard_arrow_down,
                 isPressed: _downPressed,
                 borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(9)),
+                    const BorderRadius.vertical(bottom: Radius.circular(10)),
               ),
             ),
 
@@ -169,7 +169,7 @@ class _DPadState extends State<DPad> {
                 icon: Icons.keyboard_arrow_left,
                 isPressed: _leftPressed,
                 borderRadius:
-                    const BorderRadius.horizontal(left: Radius.circular(9)),
+                    const BorderRadius.horizontal(left: Radius.circular(10)),
               ),
             ),
 
@@ -182,7 +182,7 @@ class _DPadState extends State<DPad> {
                 icon: Icons.keyboard_arrow_right,
                 isPressed: _rightPressed,
                 borderRadius:
-                    const BorderRadius.horizontal(right: Radius.circular(9)),
+                    const BorderRadius.horizontal(right: Radius.circular(10)),
               ),
             ),
           ],
@@ -233,7 +233,7 @@ class _DPadWingVisual extends StatelessWidget {
         child: Icon(
           icon,
           color: isPressed ? const Color(0xFF00C8FF) : const Color(0xFFCBD5E1),
-          size: 26,
+          size: 28,
         ),
       ),
     );

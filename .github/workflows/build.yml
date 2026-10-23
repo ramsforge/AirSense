@@ -89,34 +89,33 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.1.0.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.0.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.1.0.apk
+        path: ./release-apk/AirSense-v1.2.0.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.1.0-apk
-        name: "AirSense Android APK Release v1.1.0 (Live Telemetry & Handshake)"
+        tag_name: v1.2.0-apk
+        name: "AirSense Android APK Release v1.2.0 (Vertical Stacking & Vector Redesign)"
         body: |
-          ### AirSense Mobile Controller v1.1.0
-          - **Direct Download:** Tap [`AirSense-v1.1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.1.0-apk/AirSense-v1.1.0.apk) to install.
-          - **What's New in v1.1.0:**
-            - **Verified Handshake:** Real connect verification with 2.5s watchdog.
-            - **Live Real Telemetry:** Real round-trip ping (ms) and real device battery level.
-            - **UDP Out-of-Order Sequence Protection:** No thumbstick stutter or rubberbanding.
-            - **Remote Mode Switcher:** Toggle between PS5 DualSense and Xbox 360 mode on the fly directly in the app.
-            - **Unified 8-Way D-Pad:** Continuous thumb sliding across diagonals.
-            - **Dedicated Holdable L3 & R3:** Hold sprint or aim while maneuvering.
-            - **Jitter-Free Triggers:** Clean 100% actuation with smooth analog drag.
-            - **Touchpad Windows Trackpad:** Control PC cursor directly from mobile touchpad.
+          ### AirSense Mobile Controller v1.2.0 (Gamepad Ergonomics Redesign)
+          - **Direct Download:** Tap [`AirSense-v1.2.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.2.0-apk/AirSense-v1.2.0.apk) to install.
+          - **What's New in v1.2.0:**
+            - **Vertical Control Stacking:** D-Pad on top, Left Stick below; Action Buttons on top, Right Stick below.
+            - **Vertical Outer Flanks:** L2/R2 vertical trigger pedals and L1/R1 bumpers on phone edges where index fingers naturally rest.
+            - **De-condensed D-Pad:** Full-sized 150px 8-way D-Pad for fluid diagonal rolling without dropped touches.
+            - **Vector Face Buttons:** Clean CustomPainter geometry with zero font scaling artifacts.
+            - **Dynamic Controller Mode:** Face buttons dynamically adapt symbols and colors between PS5 (`△, ○, ✕, □`) and Xbox 360 (`Y, B, A, X`).
+            - **Dedicated Holdable L3 & R3:** Hold sprint or aim while maneuvering the analog sticks.
+            - **Real Handshake & Telemetry:** Verified connection with live RTT ping and real device battery telemetry.
           - **Connect:** Start `AirSense.Server.exe` on your PC and tap Connect in the app!
         files: |
-          ./release-apk/AirSense-v1.1.0.apk
+          ./release-apk/AirSense-v1.2.0.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

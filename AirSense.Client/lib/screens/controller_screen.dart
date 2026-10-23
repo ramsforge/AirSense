@@ -153,7 +153,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   child: Center(
                     child: Container(
                       width: 400,
-                      height: 50,
+                      height: 45,
                       decoration: BoxDecoration(
                         gradient: RadialGradient(
                           colors: [
@@ -167,11 +167,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
 
-                // Top Status & Telemetry Bar
+                // 1. Top Status & Telemetry Bar
                 Positioned(
-                  top: 8,
-                  left: 20,
-                  right: 20,
+                  top: 6,
+                  left: 14,
+                  right: 14,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -180,7 +180,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         children: [
                           const Icon(Icons.sports_esports,
                               color: Color(0xFF00C8FF), size: 18),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 7),
                           const Text(
                             'AirSense',
                             style: TextStyle(
@@ -190,7 +190,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(width: 14),
+                          const SizedBox(width: 12),
 
                           // Mode Switch Toggle Pill
                           GestureDetector(
@@ -203,7 +203,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                  horizontal: 9, vertical: 3.5),
                               decoration: BoxDecoration(
                                 color: currentMode == ControllerMode.xbox360
                                     ? const Color(0xFF107C10).withOpacity(0.25)
@@ -226,7 +226,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                           currentMode == ControllerMode.xbox360
                                               ? const Color(0xFF4ADE80)
                                               : const Color(0xFF60A5FA),
-                                      fontSize: 10.5,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -243,7 +243,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       // Real Telemetry Status Pill
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 5),
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF161A24).withOpacity(0.9),
                           borderRadius: BorderRadius.circular(20),
@@ -289,22 +289,22 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                 color: isReconnecting
                                     ? const Color(0xFFF59E0B)
                                     : const Color(0xFF94A3B8),
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             Container(
                               margin:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                                  const EdgeInsets.symmetric(horizontal: 8),
                               width: 1,
-                              height: 11,
+                              height: 10,
                               color: Colors.white12,
                             ),
 
                             // Real Live RTT (ms)
                             const Icon(
                               Icons.speed,
-                              size: 13,
+                              size: 12,
                               color: Color(0xFF38BDF8),
                             ),
                             const SizedBox(width: 4),
@@ -316,16 +316,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                     : (rttMs < 50
                                         ? const Color(0xFFFBBF24)
                                         : const Color(0xFFEF4444)),
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'monospace',
                               ),
                             ),
                             Container(
                               margin:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                                  const EdgeInsets.symmetric(horizontal: 8),
                               width: 1,
-                              height: 11,
+                              height: 10,
                               color: Colors.white12,
                             ),
 
@@ -341,7 +341,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                   : (_batteryLevel! < 20
                                       ? const Color(0xFFEF4444)
                                       : const Color(0xFF10B981)),
-                              size: 14,
+                              size: 13,
                             ),
                             const SizedBox(width: 3),
                             Text(
@@ -350,7 +350,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                   : 'N/A',
                               style: const TextStyle(
                                 color: Color(0xFFE2E8F0),
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -367,7 +367,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                   ? Icons.screen_rotation
                                   : Icons.screen_rotation_outlined,
                               color: _gyroEnabled ? lightColor : Colors.white30,
-                              size: 18,
+                              size: 17,
                             ),
                             tooltip: _gyroSupported
                                 ? (_gyroEnabled
@@ -393,7 +393,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             icon: const Icon(
                               Icons.power_settings_new,
                               color: Colors.redAccent,
-                              size: 18,
+                              size: 17,
                             ),
                             tooltip: 'Disconnect',
                             onPressed: () {
@@ -407,71 +407,65 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
 
-                // Main Gamepad Body (Ergonomic Wing Layout)
+                // 2. Main Gamepad Body (Ergonomic Two-Tier Vertical Stacks & Flanks)
                 Positioned.fill(
-                  top: 54,
-                  bottom: 8,
-                  left: 20,
-                  right: 20,
+                  top: 46,
+                  bottom: 6,
+                  left: 10,
+                  right: 10,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // LEFT WING: Stacked Shoulder (L2/L1) + Cluster (D-Pad & Elevated Left Stick + L3)
-                      SizedBox(
-                        width: 275,
+                      // LEFT FLANK: Vertical L2 Pedal (top) on L1 Bumper (below)
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _VerticalFlankAssembly(
+                          triggerLabel: 'L2',
+                          bumperLabel: 'L1',
+                          isLeft: true,
+                          onTriggerChanged: (val) {
+                            widget.network.currentPacket.leftTrigger = val;
+                            _updateButton(1 << 10, val > 200);
+                          },
+                          onBumperChanged: (pressed) =>
+                              _updateButton(1 << 8, pressed),
+                        ),
+                      ),
+
+                      // LEFT WING (Two-Tier Vertical Stack: D-Pad Top, Stick Bottom)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Stacked Triggers (L2 Pedal on top of L1 Bumper)
-                            _StackedShoulderAssembly(
-                              triggerLabel: 'L2',
-                              bumperLabel: 'L1',
-                              onTriggerChanged: (val) {
-                                widget.network.currentPacket.leftTrigger = val;
-                                _updateButton(1 << 10, val > 200);
-                              },
-                              onBumperChanged: (pressed) =>
-                                  _updateButton(1 << 8, pressed),
+                            // Top Tier: De-condensed 8-Way D-Pad (150px)
+                            DPad(
+                              size: 150,
+                              onButtonChange: _updateButton,
                             ),
 
-                            // Cluster: D-Pad & Elevated Left Stick with Dedicated Holdable L3
+                            // Bottom Tier: Elevated Left Stick + Holdable L3
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                DPad(
-                                  size: 122,
-                                  onButtonChange: _updateButton,
+                                VirtualJoystick(
+                                  size: 112,
+                                  label: 'LS',
+                                  onChanged: (offset) {
+                                    widget.network.currentPacket.leftStickX =
+                                        (offset.dx * 32767).round();
+                                    widget.network.currentPacket.leftStickY =
+                                        (offset.dy * 32767).round();
+                                  },
                                 ),
-                                // Elevated Left Stick + Holdable L3
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Dedicated Holdable L3 Button
-                                      _StickClickHoldButton(
-                                        label: 'L3',
-                                        onStateChanged: (pressed) =>
-                                            _updateButton(1 << 12, pressed),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      VirtualJoystick(
-                                        size: 114,
-                                        label: 'LS',
-                                        onChanged: (offset) {
-                                          widget.network.currentPacket
-                                                  .leftStickX =
-                                              (offset.dx * 32767).round();
-                                          widget.network.currentPacket
-                                                  .leftStickY =
-                                              (offset.dy * 32767).round();
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                                const SizedBox(width: 6),
+                                _StickClickHoldButton(
+                                  label: 'L3',
+                                  onStateChanged: (pressed) =>
+                                      _updateButton(1 << 12, pressed),
                                 ),
                               ],
                             ),
@@ -482,8 +476,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       // CENTER COLUMN: Scaled Touchpad & Protected PS Button
                       Center(
                         child: TouchpadArea(
-                          width: 200,
-                          height: 105,
+                          width: 184,
+                          height: 98,
                           lightbarColor: lightColor,
                           onTouchpadChange: (active, x, y) {
                             widget.network.currentPacket.touchpadActive =
@@ -495,65 +489,60 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ),
                       ),
 
-                      // RIGHT WING: Stacked Shoulder (R2/R1) + Cluster (Elevated Right Stick + R3 & Face Buttons)
-                      SizedBox(
-                        width: 275,
+                      // RIGHT WING (Two-Tier Vertical Stack: Face Buttons Top, Stick Bottom)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Stacked Triggers (R2 Pedal on top of R1 Bumper)
-                            _StackedShoulderAssembly(
-                              triggerLabel: 'R2',
-                              bumperLabel: 'R1',
-                              onTriggerChanged: (val) {
-                                widget.network.currentPacket.rightTrigger = val;
-                                _updateButton(1 << 11, val > 200);
-                              },
-                              onBumperChanged: (pressed) =>
-                                  _updateButton(1 << 9, pressed),
+                            // Top Tier: Vector Action Buttons (145px) with Mode Adaptation
+                            ActionButtons(
+                              size: 145,
+                              mode: currentMode,
+                              onButtonChange: _updateButton,
                             ),
 
-                            // Cluster: Elevated Right Stick + Holdable R3 & Face Buttons
+                            // Bottom Tier: Holdable R3 + Elevated Right Stick
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Elevated Right Stick + Holdable R3
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Dedicated Holdable R3 Button
-                                      _StickClickHoldButton(
-                                        label: 'R3',
-                                        onStateChanged: (pressed) =>
-                                            _updateButton(1 << 13, pressed),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      VirtualJoystick(
-                                        size: 114,
-                                        label: 'RS',
-                                        onChanged: (offset) {
-                                          widget.network.currentPacket
-                                                  .rightStickX =
-                                              (offset.dx * 32767).round();
-                                          widget.network.currentPacket
-                                                  .rightStickY =
-                                              (offset.dy * 32767).round();
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                                _StickClickHoldButton(
+                                  label: 'R3',
+                                  onStateChanged: (pressed) =>
+                                      _updateButton(1 << 13, pressed),
                                 ),
-                                ActionButtons(
-                                  size: 122,
-                                  onButtonChange: _updateButton,
+                                const SizedBox(width: 6),
+                                VirtualJoystick(
+                                  size: 112,
+                                  label: 'RS',
+                                  onChanged: (offset) {
+                                    widget.network.currentPacket.rightStickX =
+                                        (offset.dx * 32767).round();
+                                    widget.network.currentPacket.rightStickY =
+                                        (offset.dy * 32767).round();
+                                  },
                                 ),
                               ],
                             ),
                           ],
+                        ),
+                      ),
+
+                      // RIGHT FLANK: Vertical R2 Pedal (top) on R1 Bumper (below)
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _VerticalFlankAssembly(
+                          triggerLabel: 'R2',
+                          bumperLabel: 'R1',
+                          isLeft: false,
+                          onTriggerChanged: (val) {
+                            widget.network.currentPacket.rightTrigger = val;
+                            _updateButton(1 << 11, val > 200);
+                          },
+                          onBumperChanged: (pressed) =>
+                              _updateButton(1 << 9, pressed),
                         ),
                       ),
                     ],
@@ -603,10 +592,10 @@ class _StickClickHoldButtonState extends State<_StickClickHoldButton> {
         scale: _pressed ? 0.92 : 1.0,
         duration: const Duration(milliseconds: 50),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: _pressed ? const Color(0xFF0066FF) : const Color(0xFF1E2536),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: _pressed ? const Color(0xFF38BDF8) : const Color(0xFF334155),
               width: 1.5,
@@ -623,8 +612,8 @@ class _StickClickHoldButtonState extends State<_StickClickHoldButton> {
           child: Text(
             widget.label,
             style: TextStyle(
-              color: _pressed ? Colors.white : const Color(0xFF94A3B8),
-              fontSize: 10,
+              color: _pressed ? Colors.white : const Color(0xFFCBD5E1),
+              fontSize: 10.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
             ),
@@ -635,33 +624,34 @@ class _StickClickHoldButtonState extends State<_StickClickHoldButton> {
   }
 }
 
-/// Vertically stacked trigger & bumper assembly with jitter-free analog/digital handling
-class _StackedShoulderAssembly extends StatefulWidget {
+/// Vertical flank shoulder assembly (Vertical Trigger Pedal above Vertical Bumper)
+class _VerticalFlankAssembly extends StatefulWidget {
   final String triggerLabel;
   final String bumperLabel;
+  final bool isLeft;
   final ValueChanged<int> onTriggerChanged;
   final ValueChanged<bool> onBumperChanged;
 
-  const _StackedShoulderAssembly({
+  const _VerticalFlankAssembly({
     required this.triggerLabel,
     required this.bumperLabel,
+    required this.isLeft,
     required this.onTriggerChanged,
     required this.onBumperChanged,
   });
 
   @override
-  State<_StackedShoulderAssembly> createState() =>
-      _StackedShoulderAssemblyState();
+  State<_VerticalFlankAssembly> createState() => _VerticalFlankAssemblyState();
 }
 
-class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
+class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
   double _pullAmount = 0.0;
   bool _bumperPressed = false;
-  double? _dragStartX;
+  Offset? _dragStart;
   bool _isModulating = false;
 
   void _onTriggerDown(PointerDownEvent e) {
-    _dragStartX = e.localPosition.dx;
+    _dragStart = e.localPosition;
     _isModulating = false;
     // Tap actuation defaults immediately to 100% full pull (255)
     setState(() => _pullAmount = 1.0);
@@ -669,22 +659,24 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
   }
 
   void _onTriggerMove(PointerMoveEvent e) {
-    if (_dragStartX != null) {
-      final delta = (e.localPosition.dx - _dragStartX!).abs();
-      // Only switch to analog modulation if intentional horizontal drag > 12px
-      if (delta > 12) {
+    if (_dragStart != null) {
+      final deltaX = (e.localPosition.dx - _dragStart!.dx).abs();
+      final deltaY = (e.localPosition.dy - _dragStart!.dy).abs();
+      // Engage analog modulation after intentional drag (> 12px)
+      if (deltaX > 12 || deltaY > 12) {
         _isModulating = true;
       }
     }
     if (_isModulating) {
-      final amount = (e.localPosition.dx / 120.0).clamp(0.0, 1.0);
+      // Modulate smoothly based on vertical pedal height (76px)
+      final amount = (e.localPosition.dy / 76.0).clamp(0.0, 1.0);
       setState(() => _pullAmount = amount);
       widget.onTriggerChanged((amount * 255).round());
     }
   }
 
   void _onTriggerRelease() {
-    _dragStartX = null;
+    _dragStart = null;
     _isModulating = false;
     setState(() => _pullAmount = 0.0);
     widget.onTriggerChanged(0);
@@ -700,13 +692,16 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
   @override
   Widget build(BuildContext context) {
     final isPulled = _pullAmount > 0.05;
+    const flankWidth = 44.0;
+    const triggerHeight = 78.0;
+    const bumperHeight = 38.0;
 
     return SizedBox(
-      width: 120,
+      width: flankWidth,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Large Trigger Pedal (L2 / R2)
+          // 1. Vertical Trigger Pedal (L2 / R2) - Upper Edge Flank
           Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: _onTriggerDown,
@@ -715,27 +710,30 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
             onPointerCancel: (_) => _onTriggerRelease(),
             child: AnimatedScale(
               scale: isPulled ? 0.96 : 1.0,
-              duration: const Duration(milliseconds: 60),
+              duration: const Duration(milliseconds: 50),
               child: Container(
-                height: 38,
+                width: flankWidth,
+                height: triggerHeight,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isPulled
                         ? [const Color(0xFF243B60), const Color(0xFF16253D)]
-                        : [const Color(0xFF242C3C), const Color(0xFF161B24)],
+                        : [const Color(0xFF222838), const Color(0xFF141822)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isPulled
                         ? const Color(0xFF00C8FF)
-                        : const Color(0xFF354259),
+                        : const Color(0xFF334057),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: isPulled
+                          ? const Color(0xFF00C8FF).withOpacity(0.35)
+                          : Colors.black.withOpacity(0.4),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     )
@@ -744,22 +742,22 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Analog pull level gauge
+                    // Vertical analog level fill gauge
                     Positioned(
                       left: 0,
+                      right: 0,
                       bottom: 0,
-                      top: 0,
-                      width: 120 * _pullAmount,
+                      height: triggerHeight * _pullAmount,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0066FF).withOpacity(0.35),
-                          borderRadius: BorderRadius.circular(7),
+                          color: const Color(0xFF0066FF).withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
@@ -767,7 +765,7 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontSize: 12,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -777,7 +775,7 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
                               color: isPulled
                                   ? const Color(0xFF00C8FF)
                                   : const Color(0xFF64748B),
-                              fontSize: 10,
+                              fontSize: 8.5,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
                             ),
@@ -792,26 +790,27 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
           ),
           const SizedBox(height: 5),
 
-          // 2. Bumper Bar (L1 / R1)
+          // 2. Vertical Bumper Button (L1 / R1) - Positioned Below Trigger
           Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: (_) => _setBumper(true),
             onPointerUp: (_) => _setBumper(false),
             onPointerCancel: (_) => _setBumper(false),
             child: AnimatedScale(
-              scale: _bumperPressed ? 0.95 : 1.0,
-              duration: const Duration(milliseconds: 60),
+              scale: _bumperPressed ? 0.94 : 1.0,
+              duration: const Duration(milliseconds: 50),
               child: Container(
-                height: 28,
+                width: flankWidth,
+                height: bumperHeight,
                 decoration: BoxDecoration(
                   color: _bumperPressed
                       ? const Color(0xFF3B4760)
-                      : const Color(0xFF1C2230),
-                  borderRadius: BorderRadius.circular(7),
+                      : const Color(0xFF1B202D),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: _bumperPressed
                         ? Colors.white70
-                        : const Color(0xFF2D374A),
+                        : const Color(0xFF2C374A),
                     width: 1.5,
                   ),
                   boxShadow: [
@@ -825,11 +824,10 @@ class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
                   child: Text(
                     widget.bumperLabel,
                     style: TextStyle(
-                      color: _bumperPressed
-                          ? Colors.white
-                          : const Color(0xFF94A3B8),
+                      color:
+                          _bumperPressed ? Colors.white : const Color(0xFF94A3B8),
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 11.5,
                     ),
                   ),
                 ),
