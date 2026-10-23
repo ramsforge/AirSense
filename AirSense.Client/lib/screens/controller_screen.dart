@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -19,7 +21,8 @@ class ControllerScreen extends StatefulWidget {
 
 class _ControllerScreenState extends State<ControllerScreen> {
   StreamSubscription<GyroscopeEvent>? _gyroSub;
-  bool _gyroEnabled = true;
+  bool _gyroSupported = false;
+  bool _gyroEnabled = false;
 
   // Telemetry simulation (live micro-jitter)
   Timer? _telemetryTimer;
@@ -28,12 +31,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   void initState() {
     super.initState();
-    // Force Landscape orientation
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Force Landscape orientation on mobile devices
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
 
     _startGyro();
 
@@ -47,12 +52,40 @@ class _ControllerScreenState extends State<ControllerScreen> {
   }
 
   void _startGyro() {
-    _gyroSub = gyroscopeEventStream().listen((event) {
-      if (!_gyroEnabled) return;
-      widget.network.currentPacket.gyroPitch = event.x;
-      widget.network.currentPacket.gyroYaw = event.y;
-      widget.network.currentPacket.gyroRoll = event.z;
-    });
+    // Gyroscope is only supported on physical mobile devices
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      _gyroSupported = false;
+      _gyroEnabled = false;
+      return;
+    }
+
+    _gyroSupported = true;
+    _gyroEnabled = true;
+
+    try {
+      _gyroSub = gyroscopeEventStream().listen(
+        (event) {
+          if (!_gyroEnabled) return;
+          widget.network.currentPacket.gyroPitch = event.x;
+          widget.network.currentPacket.gyroYaw = event.y;
+          widget.network.currentPacket.gyroRoll = event.z;
+        },
+        onError: (dynamic error) {
+          debugPrint('Gyroscope stream error: $error');
+          if (mounted) {
+            setState(() {
+              _gyroEnabled = false;
+              _gyroSupported = false;
+            });
+          }
+        },
+        cancelOnError: true,
+      );
+    } catch (e) {
+      debugPrint('Could not start gyroscope: $e');
+      _gyroSupported = false;
+      _gyroEnabled = false;
+    }
   }
 
   @override
@@ -60,13 +93,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
     _telemetryTimer?.cancel();
     _gyroSub?.cancel();
     // Restore orientation
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
     super.dispose();
   }
 
@@ -242,8 +277,23 @@ class _ControllerScreenState extends State<ControllerScreen> {
                               color: _gyroEnabled ? lightColor : Colors.white30,
                               size: 18,
                             ),
-                            tooltip: 'Toggle Motion Gyro',
+                            tooltip: _gyroSupported
+                                ? (_gyroEnabled
+                                    ? 'Disable Motion Gyro'
+                                    : 'Enable Motion Gyro')
+                                : 'Motion gyro not supported on this platform/device',
                             onPressed: () {
+                              if (!_gyroSupported) {
+                                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Motion gyro is only supported on physical mobile devices.'),
+                                    duration: Duration(seconds: 2),
+                                    backgroundColor: Color(0xFF1E2433),
+                                  ),
+                                );
+                                return;
+                              }
                               setState(() => _gyroEnabled = !_gyroEnabled);
                             },
                           ),
