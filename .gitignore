@@ -43,3 +43,6 @@ AirSense.Client/ios/Flutter/app.framework
 *.DS_Store
 Thumbs.db
 Desktop.ini
+
+# Publish outputs
+publish/

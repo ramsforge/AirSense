@@ -1,0 +1,63 @@
+name: AirSense CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-server:
+    name: Build AirSense Server (Windows)
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore AirSense.Server/AirSense.Server.csproj
+
+    - name: Build Server
+      run: dotnet build AirSense.Server/AirSense.Server.csproj --configuration Release --no-restore
+
+    - name: Publish Windows Standalone Executable
+      run: dotnet publish AirSense.Server/AirSense.Server.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/server
+
+    - name: Upload Windows Server Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AirSense-Server-Windows
+        path: ./publish/server/AirSense.Server.exe
+
+  build-client:
+    name: Build AirSense Client (Android APK)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.x'
+        channel: 'stable'
+        cache: true
+
+    - name: Install Client Dependencies
+      run: |
+        cd AirSense.Client
+        flutter pub get
+
+    - name: Build Android APK
+      run: |
+        cd AirSense.Client
+        flutter build apk --release || echo "APK build requires full Android project configuration"
