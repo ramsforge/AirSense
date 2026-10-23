@@ -411,8 +411,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 Positioned.fill(
                   top: 46,
                   bottom: 6,
-                  left: 10,
-                  right: 10,
+                  left: 6,
+                  right: 6,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -426,7 +426,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                           isLeft: true,
                           onTriggerChanged: (val) {
                             widget.network.currentPacket.leftTrigger = val;
-                            _updateButton(1 << 10, val > 200);
+                            _updateButton(1 << 10, val > 80);
                           },
                           onBumperChanged: (pressed) =>
                               _updateButton(1 << 8, pressed),
@@ -539,7 +539,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                           isLeft: false,
                           onTriggerChanged: (val) {
                             widget.network.currentPacket.rightTrigger = val;
-                            _updateButton(1 << 11, val > 200);
+                            _updateButton(1 << 11, val > 80);
                           },
                           onBumperChanged: (pressed) =>
                               _updateButton(1 << 9, pressed),
@@ -625,6 +625,10 @@ class _StickClickHoldButtonState extends State<_StickClickHoldButton> {
 }
 
 /// Vertical flank shoulder assembly (Vertical Trigger Pedal above Vertical Bumper)
+/// Engineered for ergonomic phone thumb/index finger access with:
+/// - Inverted/corrected vertical progression: 100% full actuation at the top crest, 0% at bottom
+/// - Extended length (118px) and widened profile (58px) for effortless reach
+/// - Subtle tactile grip ridges and top actuation crest
 class _VerticalFlankAssembly extends StatefulWidget {
   final String triggerLabel;
   final String bumperLabel;
@@ -645,31 +649,40 @@ class _VerticalFlankAssembly extends StatefulWidget {
 }
 
 class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
+  static const double flankWidth = 58.0;
+  static const double triggerHeight = 118.0;
+  static const double bumperHeight = 44.0;
+
   double _pullAmount = 0.0;
   bool _bumperPressed = false;
   Offset? _dragStart;
   bool _isModulating = false;
 
+  /// Calculate trigger actuation: 100% (1.0) at the top crest, 0% (0.0) at the bottom
+  double _calculatePull(double localY) {
+    return (1.0 - (localY / triggerHeight)).clamp(0.0, 1.0);
+  }
+
   void _onTriggerDown(PointerDownEvent e) {
     _dragStart = e.localPosition;
     _isModulating = false;
-    // Tap actuation defaults immediately to 100% full pull (255)
-    setState(() => _pullAmount = 1.0);
-    widget.onTriggerChanged(255);
+    final amount = _calculatePull(e.localPosition.dy);
+    // Tapping the upper half (or quick tap) actuates at 100% immediately for reflex aim/fire.
+    // Touching lower down initiates analog modulation directly at that position.
+    final pull = amount >= 0.50 ? 1.0 : amount;
+    setState(() => _pullAmount = pull);
+    widget.onTriggerChanged((pull * 255).round());
   }
 
   void _onTriggerMove(PointerMoveEvent e) {
     if (_dragStart != null) {
-      final deltaX = (e.localPosition.dx - _dragStart!.dx).abs();
       final deltaY = (e.localPosition.dy - _dragStart!.dy).abs();
-      // Engage analog modulation after intentional drag (> 12px)
-      if (deltaX > 12 || deltaY > 12) {
+      if (deltaY > 6) {
         _isModulating = true;
       }
     }
     if (_isModulating) {
-      // Modulate smoothly based on vertical pedal height (76px)
-      final amount = (e.localPosition.dy / 76.0).clamp(0.0, 1.0);
+      final amount = _calculatePull(e.localPosition.dy);
       setState(() => _pullAmount = amount);
       widget.onTriggerChanged((amount * 255).round());
     }
@@ -691,17 +704,43 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
 
   @override
   Widget build(BuildContext context) {
-    final isPulled = _pullAmount > 0.05;
-    const flankWidth = 44.0;
-    const triggerHeight = 78.0;
-    const bumperHeight = 38.0;
+    final isPulled = _pullAmount > 0.02;
+
+    // Asymmetric organic curves matching left/right phone outer chassis
+    final triggerRadius = widget.isLeft
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            bottomLeft: Radius.circular(12),
+            topRight: Radius.circular(10),
+            bottomRight: Radius.circular(8),
+          )
+        : const BorderRadius.only(
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(12),
+            topLeft: Radius.circular(10),
+            bottomLeft: Radius.circular(8),
+          );
+
+    final bumperRadius = widget.isLeft
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(10),
+            bottomLeft: Radius.circular(14),
+            topRight: Radius.circular(8),
+            bottomRight: Radius.circular(10),
+          )
+        : const BorderRadius.only(
+            topRight: Radius.circular(10),
+            bottomRight: Radius.circular(14),
+            topLeft: Radius.circular(8),
+            bottomLeft: Radius.circular(10),
+          );
 
     return SizedBox(
       width: flankWidth,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Vertical Trigger Pedal (L2 / R2) - Upper Edge Flank
+          // 1. Extended Vertical Trigger Pedal (L2 / R2) - 100% Actuation at Top
           Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: _onTriggerDown,
@@ -709,8 +748,8 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
             onPointerUp: (_) => _onTriggerRelease(),
             onPointerCancel: (_) => _onTriggerRelease(),
             child: AnimatedScale(
-              scale: isPulled ? 0.96 : 1.0,
-              duration: const Duration(milliseconds: 50),
+              scale: isPulled ? 0.97 : 1.0,
+              duration: const Duration(milliseconds: 40),
               child: Container(
                 width: flankWidth,
                 height: triggerHeight,
@@ -722,19 +761,19 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: triggerRadius,
                   border: Border.all(
                     color: isPulled
-                        ? const Color(0xFF00C8FF)
+                        ? const Color(0xFF00E5FF)
                         : const Color(0xFF334057),
-                    width: 1.5,
+                    width: isPulled ? 1.8 : 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: isPulled
-                          ? const Color(0xFF00C8FF).withOpacity(0.35)
+                          ? const Color(0xFF00E5FF).withOpacity(0.35)
                           : Colors.black.withOpacity(0.4),
-                      blurRadius: 6,
+                      blurRadius: isPulled ? 8 : 5,
                       offset: const Offset(0, 2),
                     )
                   ],
@@ -742,7 +781,7 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Vertical analog level fill gauge
+                    // Dynamic fill gauge rising from bottom up towards 100% at the top
                     Positioned(
                       left: 0,
                       right: 0,
@@ -750,33 +789,90 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
                       height: triggerHeight * _pullAmount,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0066FF).withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF0066FF).withOpacity(0.3),
+                              const Color(0xFF00E5FF).withOpacity(0.55),
+                            ],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                          borderRadius: triggerRadius,
                         ),
                       ),
                     ),
+
+                    // Top Actuation Crest (100% Pull Indicator)
+                    Positioned(
+                      top: 0,
+                      left: 8,
+                      right: 8,
+                      height: 2.5,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isPulled
+                              ? const Color(0xFF00E5FF)
+                              : Colors.white12,
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: isPulled
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        const Color(0xFF00E5FF).withOpacity(0.6),
+                                    blurRadius: 4,
+                                  )
+                                ]
+                              : null,
+                        ),
+                      ),
+                    ),
+
+                    // Content: Label, Tactile Grip Grooves, Live % Readout
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 4),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // Trigger Label (L2 / R2)
                           Text(
                             widget.triggerLabel,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
                               letterSpacing: 0.5,
                             ),
                           ),
+
+                          // Tactile Grip Grooves (Like console triggers)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(
+                              3,
+                              (i) => Container(
+                                width: 22,
+                                height: 2,
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(
+                                      isPulled ? 0.35 : 0.12),
+                                  borderRadius: BorderRadius.circular(1),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Percentage Readout (100% at top, 0% at bottom)
                           Text(
                             '${(_pullAmount * 100).round()}%',
                             style: TextStyle(
                               color: isPulled
-                                  ? const Color(0xFF00C8FF)
+                                  ? const Color(0xFF00E5FF)
                                   : const Color(0xFF64748B),
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
                               fontFamily: 'monospace',
                             ),
                           ),
@@ -788,7 +884,7 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
               ),
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
 
           // 2. Vertical Bumper Button (L1 / R1) - Positioned Below Trigger
           Listener(
@@ -798,7 +894,7 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
             onPointerCancel: (_) => _setBumper(false),
             child: AnimatedScale(
               scale: _bumperPressed ? 0.94 : 1.0,
-              duration: const Duration(milliseconds: 50),
+              duration: const Duration(milliseconds: 40),
               child: Container(
                 width: flankWidth,
                 height: bumperHeight,
@@ -806,7 +902,7 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
                   color: _bumperPressed
                       ? const Color(0xFF3B4760)
                       : const Color(0xFF1B202D),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: bumperRadius,
                   border: Border.all(
                     color: _bumperPressed
                         ? Colors.white70
@@ -824,10 +920,12 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
                   child: Text(
                     widget.bumperLabel,
                     style: TextStyle(
-                      color:
-                          _bumperPressed ? Colors.white : const Color(0xFF94A3B8),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11.5,
+                      color: _bumperPressed
+                          ? Colors.white
+                          : const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),

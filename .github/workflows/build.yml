@@ -96,41 +96,37 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.1.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.2.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.2.1.apk
+        path: ./release-apk/AirSense-v1.2.2.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.2.1-apk
-        name: "AirSense v1.2.1 (Android APK & Windows Server)"
+        tag_name: v1.2.2-apk
+        name: "AirSense v1.2.2 (Android APK & Windows Server)"
         body: |
-          ### 📥 AirSense v1.2.1 Downloads
-          - **📱 Android Client APK:** [**`AirSense-v1.2.1.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.1-apk/AirSense-v1.2.1.apk)
-          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.1-apk/AirSense.Server.exe)
+          ### 📥 AirSense v1.2.2 Downloads
+          - **📱 Android Client APK:** [**`AirSense-v1.2.2.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.2-apk/AirSense-v1.2.2.apk)
+          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.2-apk/AirSense.Server.exe)
 
-          ### What's New in v1.2.1:
-          - **Resolved RenderFlex Overflow:** Dynamically flexible lightbar glow between Share and Options.
-          - **Vertical Control Stacking:** D-Pad on top, Left Stick below; Action Buttons on top, Right Stick below.
-          - **Vertical Outer Flanks:** L2/R2 vertical trigger pedals and L1/R1 bumpers on phone edges where index fingers naturally rest.
-          - **De-condensed D-Pad:** Full-sized 150px 8-way D-Pad for fluid diagonal rolling without dropped touches.
-          - **Vector Face Buttons:** Clean CustomPainter geometry with zero font scaling artifacts.
-          - **Dynamic Controller Mode:** Face buttons dynamically adapt symbols and colors between PS5 (`△, ○, ✕, □`) and Xbox 360 (`Y, B, A, X`).
-          - **Dedicated Holdable L3 & R3:** Hold sprint or aim while maneuvering the analog sticks.
-          - **Real Handshake & Telemetry:** Verified connection with live RTT ping and real device battery telemetry.
+          ### What's New in v1.2.2:
+          - **Inverted Trigger Progression:** L2 & R2 now actuate to 100% full pull at the top crest and 0% at the bottom, matching natural index finger reach and pull dynamics.
+          - **Enlarged Trigger Pedals:** Triggers expanded to 118px length (+51% travel) and widened to 58px (+32% width) for effortless phone edge access.
+          - **Tactile Visual Texture:** Added textured grip micro-grooves and top actuation crest indicator to trigger pedals.
+          - **Enlarged Bumpers:** L1 and R1 bumpers widened to 58px and heightened to 44px for instant tactile tapping.
 
           ### Quick Start:
           1. Download and run `AirSense.Server.exe` on your PC.
-          2. Download and install `AirSense-v1.2.1.apk` on your Android phone.
+          2. Download and install `AirSense-v1.2.2.apk` on your Android phone.
           3. Ensure both devices are on the same Wi-Fi, tap Connect, and enjoy!
         files: |
-          ./release-apk/AirSense-v1.2.1.apk
+          ./release-apk/AirSense-v1.2.2.apk
           ./release-server/AirSense.Server.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
