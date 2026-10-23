@@ -100,29 +100,33 @@ class _TouchpadAreaState extends State<TouchpadArea>
         SizedBox(
           width: widget.width,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _UtilityPillButton(
                 label: 'SHARE',
                 onStateChanged: (pressed) =>
                     widget.onSpecialButtonChange(1 << 14, pressed),
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 72,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: widget.lightbarColor,
-                  borderRadius: BorderRadius.circular(3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.lightbarColor.withOpacity(0.8),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                    )
-                  ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: widget.lightbarColor,
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.lightbarColor.withOpacity(0.8),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               _UtilityPillButton(
                 label: 'OPTIONS',
                 onStateChanged: (pressed) =>

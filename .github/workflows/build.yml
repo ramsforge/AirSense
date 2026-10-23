@@ -89,24 +89,25 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.0.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.1.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.2.0.apk
+        path: ./release-apk/AirSense-v1.2.1.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.2.0-apk
-        name: "AirSense Android APK Release v1.2.0 (Vertical Stacking & Vector Redesign)"
+        tag_name: v1.2.1-apk
+        name: "AirSense Android APK Release v1.2.1 (Vertical Stacking & Zero Overflow)"
         body: |
-          ### AirSense Mobile Controller v1.2.0 (Gamepad Ergonomics Redesign)
-          - **Direct Download:** Tap [`AirSense-v1.2.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.2.0-apk/AirSense-v1.2.0.apk) to install.
-          - **What's New in v1.2.0:**
+          ### AirSense Mobile Controller v1.2.1
+          - **Direct Download:** Tap [`AirSense-v1.2.1.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.2.1-apk/AirSense-v1.2.1.apk) to install.
+          - **What's New in v1.2.1:**
+            - **Resolved RenderFlex Overflow:** Dynamically flexible lightbar glow between Share and Options.
             - **Vertical Control Stacking:** D-Pad on top, Left Stick below; Action Buttons on top, Right Stick below.
             - **Vertical Outer Flanks:** L2/R2 vertical trigger pedals and L1/R1 bumpers on phone edges where index fingers naturally rest.
             - **De-condensed D-Pad:** Full-sized 150px 8-way D-Pad for fluid diagonal rolling without dropped touches.
@@ -116,6 +117,6 @@ jobs:
             - **Real Handshake & Telemetry:** Verified connection with live RTT ping and real device battery telemetry.
           - **Connect:** Start `AirSense.Server.exe` on your PC and tap Connect in the app!
         files: |
-          ./release-apk/AirSense-v1.2.0.apk
+          ./release-apk/AirSense-v1.2.1.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
