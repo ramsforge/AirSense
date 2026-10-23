@@ -5,14 +5,12 @@ class VirtualJoystick extends StatefulWidget {
   final double size;
   final String label;
   final ValueChanged<Offset> onChanged; // Returns normalized (-1.0 to 1.0)
-  final VoidCallback? onStickClick;    // L3 / R3
 
   const VirtualJoystick({
     super.key,
     this.size = 120,
     required this.label,
     required this.onChanged,
-    this.onStickClick,
   });
 
   @override
@@ -125,7 +123,8 @@ class _VirtualJoystickState extends State<VirtualJoystick>
       widget.onChanged(Offset.zero);
     } else {
       // Remap from 0.0 -> 1.0 outside deadzone
-      final remapped = ((normDistance - _deadzone) / (1.0 - _deadzone)).clamp(0.0, 1.0);
+      final remapped =
+          ((normDistance - _deadzone) / (1.0 - _deadzone)).clamp(0.0, 1.0);
       // Apply power curve for precise crosshair micro-aiming
       final curved = pow(remapped, _powerCurve).toDouble();
 
@@ -148,79 +147,76 @@ class _VirtualJoystickState extends State<VirtualJoystick>
         onPointerMove: _onPointerMove,
         onPointerUp: _onPointerUp,
         onPointerCancel: _onPointerCancel,
-        child: GestureDetector(
-          onDoubleTap: widget.onStickClick,
-          child: Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                colors: [Color(0xFF1E2433), Color(0xFF10141D)],
-              ),
-              border: Border.all(color: const Color(0xFF2D3748), width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                )
-              ],
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const RadialGradient(
+              colors: [Color(0xFF1E2433), Color(0xFF10141D)],
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Center deadzone reference ring
-                Container(
-                  width: 18,
-                  height: 18,
+            border: Border.all(color: const Color(0xFF2D3748), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 12,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Center deadzone reference ring
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.12),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+
+              // Thumb Knob with decoupled translation
+              Transform.translate(
+                offset: _dragOffset,
+                child: Container(
+                  width: knobRadius * 2,
+                  height: knobRadius * 2,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    gradient: const RadialGradient(
+                      colors: [Color(0xFF3B475D), Color(0xFF1C2230)],
+                      center: Alignment(-0.25, -0.25),
+                    ),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.12),
-                      width: 1.5,
+                      color: const Color(0xFF4A5568),
+                      width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.7),
+                        blurRadius: 10,
+                        offset: const Offset(2, 4),
+                      )
+                    ],
                   ),
-                ),
-
-                // Thumb Knob with decoupled translation
-                Transform.translate(
-                  offset: _dragOffset,
-                  child: Container(
-                    width: knobRadius * 2,
-                    height: knobRadius * 2,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const RadialGradient(
-                        colors: [Color(0xFF3B475D), Color(0xFF1C2230)],
-                        center: Alignment(-0.25, -0.25),
-                      ),
-                      border: Border.all(
-                        color: const Color(0xFF4A5568),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.7),
-                          blurRadius: 10,
-                          offset: const Offset(2, 4),
-                        )
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        widget.label,
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
+                  child: Center(
+                    child: Text(
+                      widget.label,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -4,9 +4,20 @@ public enum PacketType : byte
 {
     DiscoveryPing = 0x01,
     DiscoveryPong = 0x02,
+    ConnectRequest = 0x05,
+    ConnectAck = 0x06,
     InputFrame = 0x10,
     RumbleFeedback = 0x20,
-    Heartbeat = 0x30
+    Heartbeat = 0x30,
+    HeartbeatAck = 0x31,
+    SetControllerMode = 0x40,
+    ControllerModeAck = 0x41
+}
+
+public enum ControllerMode : byte
+{
+    DualSensePS5 = 0x00,
+    Xbox360 = 0x01
 }
 
 [Flags]
@@ -35,6 +46,7 @@ public enum ControllerButtons : uint
 
 public struct InputPacket
 {
+    public uint SequenceNumber;
     public ControllerButtons Buttons;
     public short LeftStickX;   // -32768 to 32767
     public short LeftStickY;   // -32768 to 32767 (Up is positive)
@@ -52,8 +64,8 @@ public struct InputPacket
     public static bool TryParse(ReadOnlySpan<byte> buffer, out InputPacket packet)
     {
         packet = default;
-        // Expected payload size: 4 (Magic) + 1 (Type) + 4 (Buttons) + 8 (Sticks) + 2 (Triggers) + 12 (Gyro) + 5 (Touchpad) = 36 bytes
-        if (buffer.Length < 36)
+        // Expected payload size: 4 (Magic) + 1 (Type) + 4 (Seq) + 4 (Buttons) + 8 (Sticks) + 2 (Triggers) + 12 (Gyro) + 5 (Touchpad) = 40 bytes
+        if (buffer.Length < 40)
             return false;
 
         // Magic "AIRS" = 0x41, 0x49, 0x52, 0x53
@@ -63,21 +75,22 @@ public struct InputPacket
         if (buffer[4] != (byte)PacketType.InputFrame)
             return false;
 
-        packet.Buttons = (ControllerButtons)BitConverter.ToUInt32(buffer.Slice(5, 4));
-        packet.LeftStickX = BitConverter.ToInt16(buffer.Slice(9, 2));
-        packet.LeftStickY = BitConverter.ToInt16(buffer.Slice(11, 2));
-        packet.RightStickX = BitConverter.ToInt16(buffer.Slice(13, 2));
-        packet.RightStickY = BitConverter.ToInt16(buffer.Slice(15, 2));
-        packet.LeftTrigger = buffer[17];
-        packet.RightTrigger = buffer[18];
+        packet.SequenceNumber = BitConverter.ToUInt32(buffer.Slice(5, 4));
+        packet.Buttons = (ControllerButtons)BitConverter.ToUInt32(buffer.Slice(9, 4));
+        packet.LeftStickX = BitConverter.ToInt16(buffer.Slice(13, 2));
+        packet.LeftStickY = BitConverter.ToInt16(buffer.Slice(15, 2));
+        packet.RightStickX = BitConverter.ToInt16(buffer.Slice(17, 2));
+        packet.RightStickY = BitConverter.ToInt16(buffer.Slice(19, 2));
+        packet.LeftTrigger = buffer[21];
+        packet.RightTrigger = buffer[22];
 
-        packet.GyroPitch = BitConverter.ToSingle(buffer.Slice(19, 4));
-        packet.GyroYaw = BitConverter.ToSingle(buffer.Slice(23, 4));
-        packet.GyroRoll = BitConverter.ToSingle(buffer.Slice(27, 4));
+        packet.GyroPitch = BitConverter.ToSingle(buffer.Slice(23, 4));
+        packet.GyroYaw = BitConverter.ToSingle(buffer.Slice(27, 4));
+        packet.GyroRoll = BitConverter.ToSingle(buffer.Slice(31, 4));
 
-        packet.TouchpadActive = buffer[31];
-        packet.TouchpadX = BitConverter.ToUInt16(buffer.Slice(32, 2));
-        packet.TouchpadY = BitConverter.ToUInt16(buffer.Slice(34, 2));
+        packet.TouchpadActive = buffer[35];
+        packet.TouchpadX = BitConverter.ToUInt16(buffer.Slice(36, 2));
+        packet.TouchpadY = BitConverter.ToUInt16(buffer.Slice(38, 2));
 
         return true;
     }
