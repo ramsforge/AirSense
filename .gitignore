@@ -1,0 +1,45 @@
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+[Dd]ebug/
+[Rr]elease/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.lock
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+
+# Android (Flutter)
+AirSense.Client/android/.gradle/
+AirSense.Client/android/local.properties
+AirSense.Client/android/gradle/
+AirSense.Client/android/build/
+AirSense.Client/android/app/build/
+
+# iOS (Flutter)
+AirSense.Client/ios/Pods/
+AirSense.Client/ios/.symlinks/
+AirSense.Client/ios/Flutter/Flutter.framework
+AirSense.Client/ios/Flutter/Flutter.podspec
+AirSense.Client/ios/Flutter/Generated.xcconfig
+AirSense.Client/ios/Flutter/app.framework
+
+# Editors & OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+Desktop.ini
