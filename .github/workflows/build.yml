@@ -35,18 +35,11 @@ jobs:
         name: AirSense-Server-Windows
         path: ./publish/server/AirSense.Server.exe
 
-  build-client:
+  build-android:
     name: Build AirSense Client (Android APK)
-    needs: build-server
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Download Windows Server Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: AirSense-Server-Windows
-        path: ./release-server
 
     - name: Setup Java
       uses: actions/setup-java@v4
@@ -96,39 +89,109 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.3.1.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.3.2.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.3.1.apk
+        path: ./release-apk/AirSense-v1.3.2.apk
+
+  build-ios:
+    name: Build AirSense Client (iOS IPA)
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+
+    - name: Install Client Dependencies
+      run: |
+        cd AirSense.Client
+        flutter pub get
+
+    - name: Build iOS Application Bundle
+      run: |
+        cd AirSense.Client
+        flutter build ios --release --no-codesign
+
+    - name: Package Sideloadable IPA
+      run: |
+        mkdir -p ./release-ios/Payload
+        cp -r AirSense.Client/build/ios/iphoneos/Runner.app ./release-ios/Payload/
+        cd ./release-ios
+        zip -r -y AirSense-v1.3.2.ipa Payload
+        cd ..
+
+    - name: Upload iOS IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AirSense-iOS-IPA
+        path: ./release-ios/AirSense-v1.3.2.ipa
+
+  release:
+    name: Publish Unified Multi-Platform Release
+    needs: [build-server, build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Windows Server Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: AirSense-Server-Windows
+        path: ./release-assets/server
+
+    - name: Download Android APK Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: AirSense-Android-APK
+        path: ./release-assets/android
+
+    - name: Download iOS IPA Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: AirSense-iOS-IPA
+        path: ./release-assets/ios
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
-      if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.3.1-apk
-        name: "AirSense v1.3.1 (Android APK & Windows Server)"
+        tag_name: v1.3.2-release
+        name: "AirSense v1.3.2 (Windows, Android & iOS)"
         body: |
-          ### 📥 AirSense v1.3.1 Downloads
-          - **📱 Android Client APK:** [**`AirSense-v1.3.1.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.1-apk/AirSense-v1.3.1.apk)
-          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.1-apk/AirSense.Server.exe)
+          ### 📥 AirSense v1.3.2 Downloads
+          - **📱 Android Client APK:** [**`AirSense-v1.3.2.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.2-release/AirSense-v1.3.2.apk)
+          - **🍏 iOS Client IPA:** [**`AirSense-v1.3.2.ipa`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.2-release/AirSense-v1.3.2.ipa)
+          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.2-release/AirSense.Server.exe)
 
-          ### What's New in v1.3.1:
-          - **🔄 Corrected Steering Direction:** Fixed default steering axis polarity so physically tilting the phone left turns the car left, and tilting right turns right.
-          - **🏎️ Tilt-Wheel Steering (Mobile Racing Style):** Physically tilt your phone like a racing wheel to steer cars in PC racing games (*Forza Horizon, Need for Speed, F1, Assetto Corsa*).
-          - **🎮 Direct LeftThumbstickX Mapping:** Maps gravity-referenced landscape rotation directly to `LeftStickX` (`-32768` to `+32767`), achieving 100% native compatibility with all PC games without custom in-game gyro setup.
-          - **🛡️ Dual-Sensor Fallback (Accelerometer + Gyro):** Resilient dual-sensor pipeline. If gyroscope is unsupported or errors, accelerometer seamlessly calculates steering tilt without disabling motion controls.
+          ---
+
+          ### What's New in v1.3.2:
+          - **🍏 Official iOS Support:** Sideloadable `.ipa` bundle for iPhone and iPad, installable via AltStore, Sideloadly, TrollStore, Scarlet, or Apple Configurator.
+          - **🏎️ Tilt-Wheel Steering (Mobile Racing Style):** Physically tilt your phone like a steering wheel to drive cars in PC racing games (*Forza Horizon, Need for Speed, F1, Assetto Corsa*).
+          - **🔄 Corrected Steering Direction:** Naturally steering left turns left, steering right turns right.
+          - **🎮 Direct LeftThumbstickX Mapping:** Maps gravity-referenced landscape rotation directly to `LeftStickX` (`-32768` to `+32767`) with 100% native compatibility with all PC games.
+          - **🛡️ Dual-Sensor Fallback (Accelerometer + Gyro):** Resilient dual-sensor pipeline with zero dropped frames or sensor crashes.
           - **🎯 Center Deadzone & Power Curve:** ±4.5° center deadzone ensures rock-solid highway straight-line stability, paired with a non-linear sensitivity curve for nimble hairpin cornering.
           - **📊 Visual Steering Leveling Gauge:** Real-time steering needle & deflection bar in the header and stick area. Tap to calibrate resting neutral angle; double-tap to invert direction.
 
+          ---
+
           ### Quick Start:
-          1. Download and run `AirSense.Server.exe` on your PC.
-          2. Download and install `AirSense-v1.3.1.apk` on your Android phone.
-          3. Tap the helmet/steering icon in the top bar to enable Tilt-Wheel mode, and steer your PC cars naturally!
+          1. **Windows PC:** Download and run `AirSense.Server.exe`.
+          2. **Mobile Device:**
+             - **Android:** Download and install `AirSense-v1.3.2.apk`.
+             - **iOS:** Download `AirSense-v1.3.2.ipa` and sideload via [AltStore](https://altstore.io), [Sideloadly](https://sideloadly.io), or [TrollStore](https://github.com/opa334/TrollStore).
+          3. Ensure both devices are on the same Wi-Fi, tap Connect, and enjoy!
         files: |
-          ./release-apk/AirSense-v1.3.1.apk
-          ./release-server/AirSense.Server.exe
+          ./release-assets/server/AirSense.Server.exe
+          ./release-assets/android/AirSense-v1.3.2.apk
+          ./release-assets/ios/AirSense-v1.3.2.ipa
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
