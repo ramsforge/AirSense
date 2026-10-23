@@ -89,26 +89,34 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.0.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.1.0.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.0.apk
+        path: ./release-apk/AirSense-v1.1.0.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.0.0-apk
-        name: "AirSense Android APK Release (v1.0.0)"
+        tag_name: v1.1.0-apk
+        name: "AirSense Android APK Release v1.1.0 (Live Telemetry & Handshake)"
         body: |
-          ### AirSense Mobile Controller for Android
-          - **Direct Download:** Tap [`AirSense-v1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.0.0-apk/AirSense-v1.0.apk) to install.
-          - **Installation:** Open the downloaded `.apk` on your Android phone and tap Install.
-          - **Connect:** Ensure your phone is connected to the same Wi-Fi as your PC, start `AirSense.Server.exe`, and tap Connect!
+          ### AirSense Mobile Controller v1.1.0
+          - **Direct Download:** Tap [`AirSense-v1.1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.1.0-apk/AirSense-v1.1.0.apk) to install.
+          - **What's New in v1.1.0:**
+            - **Verified Handshake:** Real connect verification with 2.5s watchdog.
+            - **Live Real Telemetry:** Real round-trip ping (ms) and real device battery level.
+            - **UDP Out-of-Order Sequence Protection:** No thumbstick stutter or rubberbanding.
+            - **Remote Mode Switcher:** Toggle between PS5 DualSense and Xbox 360 mode on the fly directly in the app.
+            - **Unified 8-Way D-Pad:** Continuous thumb sliding across diagonals.
+            - **Dedicated Holdable L3 & R3:** Hold sprint or aim while maneuvering.
+            - **Jitter-Free Triggers:** Clean 100% actuation with smooth analog drag.
+            - **Touchpad Windows Trackpad:** Control PC cursor directly from mobile touchpad.
+          - **Connect:** Start `AirSense.Server.exe` on your PC and tap Connect in the app!
         files: |
-          ./release-apk/AirSense-v1.0.apk
+          ./release-apk/AirSense-v1.1.0.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
