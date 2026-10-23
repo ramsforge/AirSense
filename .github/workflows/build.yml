@@ -58,21 +58,32 @@ jobs:
         cd AirSense.Client
         flutter create . --project-name air_sense_client --org com.airsense.controller --platforms=android
 
-    - name: Configure Pre-installed NDK and Permissions
+    - name: Configure NDK Environment and Symlinks
       run: |
-        # Use pre-installed NDK from GitHub Actions runner environment to prevent network timeout/corrupt zip
+        # Locate pre-installed NDK
         PREINSTALLED_NDK=$(ls /usr/local/lib/android/sdk/ndk/ | sort -V | tail -n 1)
-        echo "Detected pre-installed Android NDK: $PREINSTALLED_NDK"
+        echo "Found Runner NDK: $PREINSTALLED_NDK"
         
-        # Configure ndkVersion in build.gradle.kts or build.gradle
-        if [ -f AirSense.Client/android/app/build.gradle.kts ]; then
-          sed -i "s/ndkVersion = flutter.ndkVersion/ndkVersion = \"$PREINSTALLED_NDK\"/g" AirSense.Client/android/app/build.gradle.kts
-        elif [ -f AirSense.Client/android/app/build.gradle ]; then
-          sed -i "s/ndkVersion flutter.ndkVersion/ndkVersion \"$PREINSTALLED_NDK\"/g" AirSense.Client/android/app/build.gradle
-        fi
+        # Symlink requested 28.2.13676358 to pre-installed NDK so :jni plugin resolves without network download
+        sudo ln -s "/usr/local/lib/android/sdk/ndk/$PREINSTALLED_NDK" "/usr/local/lib/android/sdk/ndk/28.2.13676358" || true
+        
+        # Write local.properties with ndk.dir
+        echo "ndk.dir=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> AirSense.Client/android/local.properties
+        
+        # Configure root build.gradle.kts to force ndkVersion across all subprojects (including :jni)
+        cat << 'EOF' >> AirSense.Client/android/build.gradle.kts
 
-        # Disable Gradle auto-download of NDK to avoid corrupted archives
-        echo "android.builder.sdkDownload=false" >> AirSense.Client/android/gradle.properties
+        subprojects {
+            afterEvaluate {
+                if (project.hasProperty("android")) {
+                    val android = project.extensions.findByName("android")
+                    if (android is com.android.build.gradle.BaseExtension) {
+                        android.ndkVersion = "28.2.13676358"
+                    }
+                }
+            }
+        }
+        EOF
 
         # Inject networking & vibration permissions into AndroidManifest.xml
         sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
@@ -83,6 +94,9 @@ jobs:
         flutter pub get
 
     - name: Build Android APK
+      env:
+        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
+        ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd AirSense.Client
         flutter build apk --release --no-tree-shake-icons
