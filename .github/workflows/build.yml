@@ -58,32 +58,17 @@ jobs:
         cd AirSense.Client
         flutter create . --project-name air_sense_client --org com.airsense.controller --platforms=android
 
-    - name: Configure NDK Environment and Symlinks
+    - name: Configure NDK and Permissions
       run: |
         # Locate pre-installed NDK
         PREINSTALLED_NDK=$(ls /usr/local/lib/android/sdk/ndk/ | sort -V | tail -n 1)
         echo "Found Runner NDK: $PREINSTALLED_NDK"
         
-        # Symlink requested 28.2.13676358 to pre-installed NDK so :jni plugin resolves without network download
+        # Symlink preferred NDK 28.2.13676358 to pre-installed NDK so plugins (:jni) find it immediately
         sudo ln -s "/usr/local/lib/android/sdk/ndk/$PREINSTALLED_NDK" "/usr/local/lib/android/sdk/ndk/28.2.13676358" || true
         
-        # Write local.properties with ndk.dir
+        # Configure ndk.dir in local.properties
         echo "ndk.dir=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> AirSense.Client/android/local.properties
-        
-        # Configure root build.gradle.kts to force ndkVersion across all subprojects (including :jni)
-        cat << 'EOF' >> AirSense.Client/android/build.gradle.kts
-
-        subprojects {
-            afterEvaluate {
-                if (project.hasProperty("android")) {
-                    val android = project.extensions.findByName("android")
-                    if (android is com.android.build.gradle.BaseExtension) {
-                        android.ndkVersion = "28.2.13676358"
-                    }
-                }
-            }
-        }
-        EOF
 
         # Inject networking & vibration permissions into AndroidManifest.xml
         sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
