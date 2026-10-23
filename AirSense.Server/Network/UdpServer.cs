@@ -10,20 +10,34 @@ public class UdpServer : IDisposable
 {
     public const int DefaultPort = 9050;
     private readonly UdpClient _udpClient;
-    private readonly DualShockController _controller;
+    private IGamepadController _controller;
     private readonly CancellationTokenSource _cts = new();
     private IPEndPoint? _activeClient;
     private DateTime _lastInputTime = DateTime.MinValue;
     private long _packetsReceived = 0;
     private bool _disposed;
 
-    public UdpServer(DualShockController controller, int port = DefaultPort)
+    public IGamepadController Controller => _controller;
+
+    public UdpServer(IGamepadController controller, int port = DefaultPort)
     {
         _controller = controller;
         _controller.FeedbackReceived += OnControllerFeedback;
 
         _udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, port));
         _udpClient.EnableBroadcast = true;
+    }
+
+    public void SwitchController(IGamepadController newController)
+    {
+        _controller.FeedbackReceived -= OnControllerFeedback;
+        _controller.Dispose();
+
+        _controller = newController;
+        _controller.FeedbackReceived += OnControllerFeedback;
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"\n[Switched] Active Gamepad is now: {_controller.ControllerType}");
+        Console.ResetColor();
     }
 
     public void Start()
@@ -35,8 +49,6 @@ public class UdpServer : IDisposable
 
     private async Task ReceiveLoop()
     {
-        var buffer = new byte[1024];
-
         while (!_cts.IsCancellationRequested)
         {
             try
@@ -98,7 +110,6 @@ public class UdpServer : IDisposable
 
     private async Task HandleDiscoveryPing(IPEndPoint remoteEndPoint)
     {
-        // Response format: "AIRS" + 0x02 + HostNameLength (1 byte) + HostName (UTF8)
         var hostName = Environment.MachineName;
         var hostNameBytes = Encoding.UTF8.GetBytes(hostName);
         var response = new byte[5 + 1 + hostNameBytes.Length];
@@ -119,7 +130,6 @@ public class UdpServer : IDisposable
     {
         if (_activeClient == null || _disposed) return;
 
-        // Feedback packet: "AIRS" + 0x20 + LargeMotor + SmallMotor + R + G + B (9 bytes)
         var packet = new byte[10];
         packet[0] = 0x41;
         packet[1] = 0x49;
@@ -148,7 +158,7 @@ public class UdpServer : IDisposable
             if (_activeClient != null && (DateTime.UtcNow - _lastInputTime).TotalSeconds > 2.5)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"[Disconnected] No inputs received from {_activeClient} for >2.5s. Resetting virtual controller...");
+                Console.WriteLine($"[Disconnected] No inputs received from {_activeClient} for >2.5s. Neutralizing controller...");
                 Console.ResetColor();
 
                 _activeClient = null;
@@ -163,6 +173,7 @@ public class UdpServer : IDisposable
         _disposed = true;
         _cts.Cancel();
         _controller.FeedbackReceived -= OnControllerFeedback;
+        _controller.Dispose();
         _udpClient.Dispose();
         _cts.Dispose();
     }

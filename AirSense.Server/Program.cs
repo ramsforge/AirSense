@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using AirSense.Server.Controller;
 using AirSense.Server.Network;
 
-Console.Title = "AirSense Server - Virtual DualSense / PS4 Bridge";
+Console.Title = "AirSense Server - PS5 DualSense & Universal PC Controller";
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -17,25 +17,29 @@ Console.WriteLine(@"
    ║      ██║  ██║██║██║  ██║███████║███████╗██║ ╚████║     ║
    ║      ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝     ║
    ║                                                       ║
-   ║      Virtual PlayStation Controller Bridge for PC     ║
+   ║   Virtual PS5 DualSense & Universal Gamepad Bridge    ║
    ╚═══════════════════════════════════════════════════════╝
 ");
 Console.ResetColor();
 
-Console.WriteLine("Initializing ViGEmBus virtual controller...");
-
 try
 {
-    using var controller = new DualShockController();
+    // Start with PS5 DualSense Controller (VID 0x054C, PID 0x0CE6)
+    IGamepadController activeGamepad = new DualSenseController();
+
     Console.ForegroundColor = ConsoleColor.Green;
-    Console.WriteLine("✓ Virtual DualShock 4 Controller created and plugged in successfully!");
+    Console.WriteLine($"✓ {activeGamepad.ControllerType} initialized and connected!");
     Console.ResetColor();
 
-    using var server = new UdpServer(controller);
+    using var server = new UdpServer(activeGamepad);
     server.Start();
 
-    // Print local IPs for manual connection fallback
-    Console.WriteLine("\nLocal IP Addresses for manual connection (if auto-discovery is blocked):");
+    Console.WriteLine("\n[Hotkeys]");
+    Console.WriteLine("  Press [P] -> Switch to PS5 DualSense Mode (VID: 0x054C, PID: 0x0CE6)");
+    Console.WriteLine("  Press [X] -> Switch to Xbox 360 / Universal PC Mode (Fixes rotated buttons in non-Sony PC games)");
+    Console.WriteLine("  Press [Ctrl+C] -> Disconnect and Exit");
+
+    Console.WriteLine("\nLocal IP Addresses for AirSense mobile app:");
     var host = Dns.GetHostEntry(Dns.GetHostName());
     foreach (var ip in host.AddressList)
     {
@@ -45,23 +49,34 @@ try
         }
     }
 
-    Console.WriteLine("\n[Status] Waiting for AirSense mobile client to connect...");
-    Console.WriteLine("Press [Ctrl+C] to disconnect controller and exit.\n");
+    Console.WriteLine("\n[Status] Waiting for AirSense phone app to connect...\n");
 
-    var tcs = new TaskCompletionSource();
-    Console.CancelKeyPress += (s, e) =>
+    // Hotkey listener loop
+    while (true)
     {
-        e.Cancel = true;
-        Console.WriteLine("\nShutting down AirSense Server...");
-        tcs.TrySetResult();
-    };
+        var key = Console.ReadKey(intercept: true).Key;
 
-    await tcs.Task;
+        if (key == ConsoleKey.X)
+        {
+            if (server.Controller is not Xbox360Gamepad)
+            {
+                server.SwitchController(new Xbox360Gamepad());
+                Console.WriteLine("💡 Tip: Xbox 360 Mode maps Cross -> A, Circle -> B, Square -> X, Triangle -> Y.");
+            }
+        }
+        else if (key == ConsoleKey.P)
+        {
+            if (server.Controller is not DualSenseController)
+            {
+                server.SwitchController(new DualSenseController());
+                Console.WriteLine("💡 Tip: PS5 DualSense Mode uses Sony VID 0x054C & PID 0x0CE6.");
+            }
+        }
+    }
 }
 catch (Exception ex)
 {
     Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"\n[Fatal Error] Failed to start AirSense Server: {ex.Message}");
-    Console.WriteLine(ex.ToString());
+    Console.WriteLine($"\n[Fatal Error] AirSense Server encountered an error: {ex.Message}");
     Console.ResetColor();
 }
