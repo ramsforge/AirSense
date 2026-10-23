@@ -96,39 +96,39 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.3.0.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.3.1.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.3.0.apk
+        path: ./release-apk/AirSense-v1.3.1.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.3.0-apk
-        name: "AirSense v1.3.0 (Android APK & Windows Server)"
+        tag_name: v1.3.1-apk
+        name: "AirSense v1.3.1 (Android APK & Windows Server)"
         body: |
-          ### 📥 AirSense v1.3.0 Downloads
-          - **📱 Android Client APK:** [**`AirSense-v1.3.0.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.0-apk/AirSense-v1.3.0.apk)
-          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.0-apk/AirSense.Server.exe)
+          ### 📥 AirSense v1.3.1 Downloads
+          - **📱 Android Client APK:** [**`AirSense-v1.3.1.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.1-apk/AirSense-v1.3.1.apk)
+          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.1-apk/AirSense.Server.exe)
 
-          ### What's New in v1.3.0 (Tilt-Steering Racing Update):
-          - **🏎️ Tilt-Wheel Steering (Mobile Racing Style):** Physically tilt your phone left and right to steer cars in PC racing games (*Forza Horizon, Need for Speed, F1, Assetto Corsa*)!
+          ### What's New in v1.3.1:
+          - **🔄 Corrected Steering Direction:** Fixed default steering axis polarity so physically tilting the phone left turns the car left, and tilting right turns right.
+          - **🏎️ Tilt-Wheel Steering (Mobile Racing Style):** Physically tilt your phone like a racing wheel to steer cars in PC racing games (*Forza Horizon, Need for Speed, F1, Assetto Corsa*).
           - **🎮 Direct LeftThumbstickX Mapping:** Maps gravity-referenced landscape rotation directly to `LeftStickX` (`-32768` to `+32767`), achieving 100% native compatibility with all PC games without custom in-game gyro setup.
           - **🛡️ Dual-Sensor Fallback (Accelerometer + Gyro):** Resilient dual-sensor pipeline. If gyroscope is unsupported or errors, accelerometer seamlessly calculates steering tilt without disabling motion controls.
           - **🎯 Center Deadzone & Power Curve:** ±4.5° center deadzone ensures rock-solid highway straight-line stability, paired with a non-linear sensitivity curve for nimble hairpin cornering.
           - **📊 Visual Steering Leveling Gauge:** Real-time steering needle & deflection bar in the header and stick area. Tap to calibrate resting neutral angle; double-tap to invert direction.
-          - **⚡ High-Frequency Sensors:** Android 12+ `HIGH_SAMPLING_RATE_SENSORS` permission enabled for low-latency 50Hz+ motion updates.
 
           ### Quick Start:
           1. Download and run `AirSense.Server.exe` on your PC.
-          2. Download and install `AirSense-v1.3.0.apk` on your Android phone.
+          2. Download and install `AirSense-v1.3.1.apk` on your Android phone.
           3. Tap the helmet/steering icon in the top bar to enable Tilt-Wheel mode, and steer your PC cars naturally!
         files: |
-          ./release-apk/AirSense-v1.3.0.apk
+          ./release-apk/AirSense-v1.3.1.apk
           ./release-server/AirSense.Server.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

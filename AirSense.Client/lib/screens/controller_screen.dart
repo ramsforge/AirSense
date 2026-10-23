@@ -133,10 +133,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
     // In landscape mode:
     // event.y measures tilt toward the left or right bumper.
-    // In standard landscape (landscapeLeft, top of phone on left):
-    // Tilting left causes +Y gravity acceleration, so -deltaY maps to negative steer (Left).
+    // By default: tilting left tilts the phone counter-clockwise into negative deflection (Left),
+    // and tilting right tilts clockwise into positive deflection (Right).
     // If _invertSteer is true, flip the direction.
-    final directedY = _invertSteer ? deltaY : -deltaY;
+    final directedY = _invertSteer ? -deltaY : deltaY;
 
     // Normalize tilt angle between -1.0 (Full Left) and +1.0 (Full Right)
     // 6.5 m/s^2 corresponds to ~41.5 degrees of phone rotation for 100% steering lock
