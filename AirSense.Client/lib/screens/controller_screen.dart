@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -22,9 +23,16 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
+  // Dual-Sensor Motion Telemetry (Accelerometer primary tilt + Gyroscope secondary)
+  StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
-  bool _gyroSupported = false;
-  bool _gyroEnabled = false;
+  bool _sensorsSupported = false;
+  bool _motionSteerEnabled = false;
+  bool _invertSteer = false;
+  double _currentTilt = 0.0; // Normalized -1.0 (Full Left) to +1.0 (Full Right)
+  double _calibratedZeroY = 0.0;
+  double _lastRawY = 0.0;
+  bool _leftStickTouched = false;
 
   // Real device battery telemetry
   final Battery _battery = Battery();
@@ -43,7 +51,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
 
-    _startGyro();
+    _startSensors();
     _initBattery();
 
     _batteryTimer = Timer.periodic(const Duration(seconds: 20), (_) {
@@ -68,46 +76,160 @@ class _ControllerScreenState extends State<ControllerScreen> {
     }
   }
 
-  void _startGyro() {
-    // Gyroscope is only supported on physical mobile devices
+  void _startSensors() {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
-      _gyroSupported = false;
-      _gyroEnabled = false;
+      _sensorsSupported = false;
+      _motionSteerEnabled = false;
       return;
     }
 
-    _gyroSupported = true;
-    _gyroEnabled = true;
-
+    // 1. Primary Accelerometer Stream (Gravity vector for tilt-steering)
     try {
-      _gyroSub = gyroscopeEventStream().listen(
+      _accelSub = accelerometerEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
         (event) {
-          if (!_gyroEnabled) return;
+          if (!_sensorsSupported && mounted) {
+            setState(() => _sensorsSupported = true);
+          }
+          _processAccelerometerTilt(event);
+        },
+        onError: (dynamic error) {
+          debugPrint('Accelerometer stream error: $error');
+        },
+        cancelOnError: false,
+      );
+    } catch (e) {
+      debugPrint('Could not start accelerometer: $e');
+    }
+
+    // 2. Dual-Sensor Fallback: Gyroscope Stream (for DualSense rate gyros if present)
+    try {
+      _gyroSub = gyroscopeEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
+        (event) {
+          if (!_sensorsSupported && mounted) {
+            setState(() => _sensorsSupported = true);
+          }
           widget.network.currentPacket.gyroPitch = event.x;
           widget.network.currentPacket.gyroYaw = event.y;
           widget.network.currentPacket.gyroRoll = event.z;
         },
         onError: (dynamic error) {
           debugPrint('Gyroscope stream error: $error');
-          if (mounted) {
-            setState(() {
-              _gyroEnabled = false;
-              _gyroSupported = false;
-            });
-          }
+          // Dual-sensor fallback: accelerometer continues handling tilt steering even if gyro is unavailable!
         },
-        cancelOnError: true,
+        cancelOnError: false,
       );
     } catch (e) {
       debugPrint('Could not start gyroscope: $e');
-      _gyroSupported = false;
-      _gyroEnabled = false;
     }
+  }
+
+  void _processAccelerometerTilt(AccelerometerEvent event) {
+    _lastRawY = event.y;
+    final deltaY = event.y - _calibratedZeroY;
+
+    // In landscape mode:
+    // event.y measures tilt toward the left or right bumper.
+    // In standard landscape (landscapeLeft, top of phone on left):
+    // Tilting left causes +Y gravity acceleration, so -deltaY maps to negative steer (Left).
+    // If _invertSteer is true, flip the direction.
+    final directedY = _invertSteer ? deltaY : -deltaY;
+
+    // Normalize tilt angle between -1.0 (Full Left) and +1.0 (Full Right)
+    // 6.5 m/s^2 corresponds to ~41.5 degrees of phone rotation for 100% steering lock
+    final rawTilt = (directedY / 6.5).clamp(-1.0, 1.0);
+
+    // Center deadzone: ~4.5 degrees (0.08 normalized) to eliminate micro-hand tremor
+    const double deadzone = 0.08;
+    double calculatedTilt = 0.0;
+    if (rawTilt.abs() > deadzone) {
+      final double normalized = (rawTilt.abs() - deadzone) / (1.0 - deadzone);
+      // Non-linear power curve for stable cruising and responsive hairpin turns
+      calculatedTilt = pow(normalized, 1.4) * rawTilt.sign;
+    }
+
+    // Only trigger rebuild if tilt changed meaningfully to optimize rendering
+    if ((_currentTilt - calculatedTilt).abs() > 0.02) {
+      if (mounted) {
+        setState(() => _currentTilt = calculatedTilt);
+      }
+    } else {
+      _currentTilt = calculatedTilt;
+    }
+
+    // Map directly to LeftStickX when tilt steering is enabled and thumb isn't overriding
+    if (_motionSteerEnabled && !_leftStickTouched) {
+      final steerValue = (_currentTilt * 32767).round().clamp(-32768, 32767);
+      widget.network.currentPacket.leftStickX = steerValue;
+    }
+  }
+
+  void _toggleMotionSteering() {
+    if (!_sensorsSupported) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('No motion sensors available on this device.'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Color(0xFF1E2433),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _motionSteerEnabled = !_motionSteerEnabled;
+      if (!_motionSteerEnabled && !_leftStickTouched) {
+        widget.network.currentPacket.leftStickX = 0;
+      } else if (_motionSteerEnabled) {
+        // Auto-calibrate current resting angle as neutral 0.0 upon activation
+        _calibratedZeroY = _lastRawY;
+      }
+    });
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(_motionSteerEnabled
+            ? 'Tilt Steering: ENABLED (Calibrated to current resting angle)'
+            : 'Tilt Steering: DISABLED (Standard thumbstick control)'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF1E2433),
+      ),
+    );
+  }
+
+  void _calibrateSteering() {
+    setState(() {
+      _calibratedZeroY = _lastRawY;
+    });
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text('Steering wheel neutral angle calibrated.'),
+        duration: Duration(seconds: 1),
+        backgroundColor: Color(0xFF1E2433),
+      ),
+    );
+  }
+
+  void _toggleInvertSteer() {
+    setState(() {
+      _invertSteer = !_invertSteer;
+    });
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(_invertSteer ? 'Steering Inverted' : 'Steering Normal'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: const Color(0xFF1E2433),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _batteryTimer?.cancel();
+    _accelSub?.cancel();
     _gyroSub?.cancel();
     // Restore orientation
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -358,36 +480,32 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ),
                       ),
 
-                      // Quick Gyro & Disconnect Actions
+                      // Quick Tilt Steering & Disconnect Actions
                       Row(
                         children: [
+                          if (_motionSteerEnabled)
+                            _SteeringMeterWidget(
+                              tilt: _currentTilt,
+                              isEnabled: _motionSteerEnabled,
+                              onCalibrate: _calibrateSteering,
+                              onInvert: _toggleInvertSteer,
+                            ),
                           IconButton(
                             icon: Icon(
-                              _gyroEnabled
-                                  ? Icons.screen_rotation
-                                  : Icons.screen_rotation_outlined,
-                              color: _gyroEnabled ? lightColor : Colors.white30,
-                              size: 17,
+                              _motionSteerEnabled
+                                  ? Icons.sports_motorsports
+                                  : Icons.sports_motorsports_outlined,
+                              color: _motionSteerEnabled
+                                  ? const Color(0xFF00E5FF)
+                                  : Colors.white30,
+                              size: 19,
                             ),
-                            tooltip: _gyroSupported
-                                ? (_gyroEnabled
-                                    ? 'Disable Motion Gyro'
-                                    : 'Enable Motion Gyro')
-                                : 'Motion gyro not supported on this platform/device',
-                            onPressed: () {
-                              if (!_gyroSupported) {
-                                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Motion gyro is only supported on physical mobile devices.'),
-                                    duration: Duration(seconds: 2),
-                                    backgroundColor: Color(0xFF1E2433),
-                                  ),
-                                );
-                                return;
-                              }
-                              setState(() => _gyroEnabled = !_gyroEnabled);
-                            },
+                            tooltip: _sensorsSupported
+                                ? (_motionSteerEnabled
+                                    ? 'Tilt Steering: ON (Tap to toggle, double-tap meter to invert)'
+                                    : 'Tilt Steering: OFF (Tap to enable)')
+                                : 'No motion sensors available on this device',
+                            onPressed: _toggleMotionSteering,
                           ),
                           IconButton(
                             icon: const Icon(
@@ -446,26 +564,82 @@ class _ControllerScreenState extends State<ControllerScreen> {
                               onButtonChange: _updateButton,
                             ),
 
-                            // Bottom Tier: Elevated Left Stick + Holdable L3
-                            Row(
+                            // Bottom Tier: Elevated Left Stick + Holdable L3 + Steering Feedback
+                            Column(
                               mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                VirtualJoystick(
-                                  size: 112,
-                                  label: 'LS',
-                                  onChanged: (offset) {
-                                    widget.network.currentPacket.leftStickX =
-                                        (offset.dx * 32767).round();
-                                    widget.network.currentPacket.leftStickY =
-                                        (offset.dy * 32767).round();
-                                  },
-                                ),
-                                const SizedBox(width: 6),
-                                _StickClickHoldButton(
-                                  label: 'L3',
-                                  onStateChanged: (pressed) =>
-                                      _updateButton(1 << 12, pressed),
+                                if (_motionSteerEnabled)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A)
+                                          .withValues(alpha: 0.85),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: const Color(0xFF00E5FF)
+                                            .withValues(alpha: 0.45),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.sports_motorsports,
+                                          size: 11,
+                                          color: Color(0xFF00E5FF),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _currentTilt.abs() < 0.05
+                                              ? 'WHEEL: CENTER'
+                                              : (_currentTilt < 0
+                                                  ? '◄ ${(-_currentTilt * 100).round()}% LEFT'
+                                                  : 'RIGHT ${(_currentTilt * 100).round()}% ►'),
+                                          style: const TextStyle(
+                                            color: Color(0xFF00E5FF),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    VirtualJoystick(
+                                      size: 112,
+                                      label: 'LS',
+                                      onChanged: (offset) {
+                                        if (offset == Offset.zero) {
+                                          _leftStickTouched = false;
+                                          if (!_motionSteerEnabled) {
+                                            widget.network.currentPacket
+                                                .leftStickX = 0;
+                                          }
+                                        } else {
+                                          _leftStickTouched = true;
+                                          widget.network.currentPacket
+                                                  .leftStickX =
+                                              (offset.dx * 32767).round();
+                                        }
+                                        widget.network.currentPacket
+                                                .leftStickY =
+                                            (offset.dy * 32767).round();
+                                      },
+                                    ),
+                                    const SizedBox(width: 6),
+                                    _StickClickHoldButton(
+                                      label: 'L3',
+                                      onStateChanged: (pressed) =>
+                                          _updateButton(1 << 12, pressed),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -933,6 +1107,122 @@ class _VerticalFlankAssemblyState extends State<_VerticalFlankAssembly> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact Visual Wheel Angle Indicator (Leveling meter with live steering feedback)
+class _SteeringMeterWidget extends StatelessWidget {
+  final double tilt; // -1.0 to +1.0
+  final bool isEnabled;
+  final VoidCallback onCalibrate;
+  final VoidCallback onInvert;
+
+  const _SteeringMeterWidget({
+    required this.tilt,
+    required this.isEnabled,
+    required this.onCalibrate,
+    required this.onInvert,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isEnabled) return const SizedBox.shrink();
+
+    const meterWidth = 84.0;
+    const meterHeight = 20.0;
+    final clampedTilt = tilt.clamp(-1.0, 1.0);
+    // Needle position along the meter width
+    final indicatorX = (meterWidth / 2) + (clampedTilt * (meterWidth / 2 - 6));
+
+    return GestureDetector(
+      onTap: onCalibrate,
+      onDoubleTap: onInvert,
+      child: Tooltip(
+        message:
+            'Tilt Steering Active. Tap to Re-center / Calibrate, Double-tap to Invert.',
+        child: Container(
+          width: meterWidth,
+          height: meterHeight,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF131722),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color(0xFF00E5FF).withValues(alpha: 0.5),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
+                blurRadius: 4,
+              )
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Center neutral tick mark
+              Container(
+                width: 1.5,
+                height: 10,
+                color: Colors.white24,
+              ),
+
+              // Left deflection bar from center
+              if (clampedTilt < 0)
+                Positioned(
+                  right: meterWidth / 2,
+                  width: (-clampedTilt * (meterWidth / 2 - 4)),
+                  height: 6,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(3),
+                      ),
+                    ),
+                  ),
+                )
+              // Right deflection bar from center
+              else if (clampedTilt > 0)
+                Positioned(
+                  left: meterWidth / 2,
+                  width: (clampedTilt * (meterWidth / 2 - 4)),
+                  height: 6,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
+                      borderRadius: const BorderRadius.horizontal(
+                        right: Radius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Dynamic steering needle / bubble
+              Positioned(
+                left: (indicatorX - 4).clamp(2.0, meterWidth - 10.0),
+                top: 3,
+                child: Container(
+                  width: 8,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0xFF00E5FF),
+                        blurRadius: 4,
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

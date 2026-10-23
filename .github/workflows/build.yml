@@ -77,8 +77,8 @@ jobs:
         # Configure ndk.dir in local.properties
         echo "ndk.dir=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> AirSense.Client/android/local.properties
 
-        # Inject networking & vibration permissions into AndroidManifest.xml
-        sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
+        # Inject networking, vibration & sensor permissions into AndroidManifest.xml
+        sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>\n    <uses-permission android:name="android.hardware.HIGH_SAMPLING_RATE_SENSORS"\/>\n    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
 
     - name: Install Client Dependencies
       run: |
@@ -96,37 +96,39 @@ jobs:
     - name: Prepare APK Output
       run: |
         mkdir -p ./release-apk
-        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.2.2.apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.3.0.apk
 
     - name: Upload Android APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AirSense-Android-APK
-        path: ./release-apk/AirSense-v1.2.2.apk
+        path: ./release-apk/AirSense-v1.3.0.apk
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.2.2-apk
-        name: "AirSense v1.2.2 (Android APK & Windows Server)"
+        tag_name: v1.3.0-apk
+        name: "AirSense v1.3.0 (Android APK & Windows Server)"
         body: |
-          ### 📥 AirSense v1.2.2 Downloads
-          - **📱 Android Client APK:** [**`AirSense-v1.2.2.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.2-apk/AirSense-v1.2.2.apk)
-          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.2.2-apk/AirSense.Server.exe)
+          ### 📥 AirSense v1.3.0 Downloads
+          - **📱 Android Client APK:** [**`AirSense-v1.3.0.apk`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.0-apk/AirSense-v1.3.0.apk)
+          - **💻 Windows PC Server:** [**`AirSense.Server.exe`**](https://github.com/ramsforge/AirSense/releases/download/v1.3.0-apk/AirSense.Server.exe)
 
-          ### What's New in v1.2.2:
-          - **Inverted Trigger Progression:** L2 & R2 now actuate to 100% full pull at the top crest and 0% at the bottom, matching natural index finger reach and pull dynamics.
-          - **Enlarged Trigger Pedals:** Triggers expanded to 118px length (+51% travel) and widened to 58px (+32% width) for effortless phone edge access.
-          - **Tactile Visual Texture:** Added textured grip micro-grooves and top actuation crest indicator to trigger pedals.
-          - **Enlarged Bumpers:** L1 and R1 bumpers widened to 58px and heightened to 44px for instant tactile tapping.
+          ### What's New in v1.3.0 (Tilt-Steering Racing Update):
+          - **🏎️ Tilt-Wheel Steering (Mobile Racing Style):** Physically tilt your phone left and right to steer cars in PC racing games (*Forza Horizon, Need for Speed, F1, Assetto Corsa*)!
+          - **🎮 Direct LeftThumbstickX Mapping:** Maps gravity-referenced landscape rotation directly to `LeftStickX` (`-32768` to `+32767`), achieving 100% native compatibility with all PC games without custom in-game gyro setup.
+          - **🛡️ Dual-Sensor Fallback (Accelerometer + Gyro):** Resilient dual-sensor pipeline. If gyroscope is unsupported or errors, accelerometer seamlessly calculates steering tilt without disabling motion controls.
+          - **🎯 Center Deadzone & Power Curve:** ±4.5° center deadzone ensures rock-solid highway straight-line stability, paired with a non-linear sensitivity curve for nimble hairpin cornering.
+          - **📊 Visual Steering Leveling Gauge:** Real-time steering needle & deflection bar in the header and stick area. Tap to calibrate resting neutral angle; double-tap to invert direction.
+          - **⚡ High-Frequency Sensors:** Android 12+ `HIGH_SAMPLING_RATE_SENSORS` permission enabled for low-latency 50Hz+ motion updates.
 
           ### Quick Start:
           1. Download and run `AirSense.Server.exe` on your PC.
-          2. Download and install `AirSense-v1.2.2.apk` on your Android phone.
-          3. Ensure both devices are on the same Wi-Fi, tap Connect, and enjoy!
+          2. Download and install `AirSense-v1.3.0.apk` on your Android phone.
+          3. Tap the helmet/steering icon in the top bar to enable Tilt-Wheel mode, and steer your PC cars naturally!
         files: |
-          ./release-apk/AirSense-v1.2.2.apk
+          ./release-apk/AirSense-v1.3.0.apk
           ./release-server/AirSense.Server.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
