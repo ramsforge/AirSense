@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AirSense - Virtual DualSense Controller (Overhaul)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    :root {
+      --bg-dark: #08090d;
+      --frame-bg: #0e1118;
+      --card-bg: #161a24;
+      --ps-blue: #0066ff;
+      --ps-light-blue: #00c8ff;
+      --triangle-green: #00ff85;
+      --circle-red: #ff3366;
+      --cross-blue: #3399ff;
+      --square-pink: #ff66cc;
+      --btn-bg: #1c2230;
+      --btn-border: #2d374a;
+      --btn-active: #3b4760;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Outer Phone Frame */
+    .phone-container {
+      position: relative;
+      width: 960px;
+      height: 500px;
+      background: var(--frame-bg);
+      border: 14px solid #1c202b;
+      border-radius: 46px;
+      box-shadow: 
+        0 25px 70px rgba(0,0,0,0.9), 
+        0 0 50px rgba(0, 102, 255, 0.15),
+        inset 0 0 20px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    /* Ambient DualSense Lightbar Glow */
+    .lightbar-ambient {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 480px;
+      height: 60px;
+      background: radial-gradient(ellipse at top, rgba(0, 102, 255, 0.4) 0%, transparent 75%);
+      pointer-events: none;
+      transition: background 0.4s ease;
+      z-index: 1;
+    }
+
+    /* Top Telemetry & Status Bar */
+    .header-bar {
+      height: 52px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+      z-index: 10;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #e2e8f0;
+    }
+    .brand-title svg {
+      color: var(--ps-light-blue);
+    }
+
+    /* Expanded Telemetry Status Pill */
+    .telemetry-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(22, 26, 36, 0.85);
+      border: 1px solid rgba(45, 55, 74, 0.8);
+      padding: 6px 16px;
+      border-radius: 24px;
+      font-size: 11px;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #94a3b8;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseAnim 2s infinite;
+    }
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+    .telemetry-divider {
+      width: 1px;
+      height: 12px;
+      background: rgba(255,255,255,0.12);
+    }
+    .rtt-val {
+      color: #38bdf8;
+      font-family: monospace;
+      font-weight: 700;
+    }
+    .battery-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #e2e8f0;
+    }
+    .battery-icon {
+      width: 18px;
+      height: 10px;
+      border: 1.5px solid #94a3b8;
+      border-radius: 2px;
+      position: relative;
+      padding: 1px;
+    }
+    .battery-icon::after {
+      content: '';
+      position: absolute;
+      right: -3.5px;
+      top: 2px;
+      width: 2px;
+      height: 4px;
+      background: #94a3b8;
+      border-radius: 0 1px 1px 0;
+    }
+    .battery-fill {
+      width: 94%;
+      height: 100%;
+      background: #10b981;
+      border-radius: 1px;
+    }
+
+    /* Main Controller Layout Area */
+    .gamepad-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 290px 1fr 290px;
+      padding: 6px 20px 18px 20px;
+      position: relative;
+      z-index: 5;
+    }
+
+    /* Left & Right Control Wings */
+    .control-wing {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    /* Stacked Shoulder & Trigger Assemblies */
+    .stacked-triggers {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 130px;
+    }
+    .trigger-pedal {
+      width: 100%;
+      height: 42px;
+      background: linear-gradient(180deg, #242c3c 0%, #161b24 100%);
+      border: 1.5px solid #354259;
+      border-radius: 10px;
+      color: #f1f5f9;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      transition: transform 0.08s, border-color 0.1s, box-shadow 0.1s;
+    }
+    .trigger-pedal .gauge-fill {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      top: 0;
+      width: 0%;
+      background: rgba(0, 102, 255, 0.35);
+      border-right: 2px solid var(--ps-light-blue);
+      pointer-events: none;
+      transition: width 0.05s linear;
+    }
+    .trigger-pedal:active, .trigger-pedal.active {
+      transform: scale(0.96);
+      border-color: var(--ps-light-blue);
+      box-shadow: 0 0 14px rgba(0, 200, 255, 0.3);
+    }
+    .bumper-bar {
+      width: 100%;
+      height: 30px;
+      background: #1c2230;
+      border: 1.5px solid #2d374a;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      transition: all 0.08s;
+    }
+    .bumper-bar:active, .bumper-bar.active {
+      transform: scale(0.95);
+      background: var(--btn-active);
+      color: #fff;
+      border-color: #64748b;
+    }
+
+    /* Staggered Ergonomic Clusters */
+    .cluster-zone {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    /* D-Pad 4-Way Cross with Outlines */
+    .dpad-container {
+      width: 126px;
+      height: 126px;
+      position: relative;
+    }
+    .dpad-btn {
+      position: absolute;
+      background: #1e2433;
+      border: 1.5px solid #334155;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.08s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+    .dpad-btn:active, .dpad-btn.active {
+      background: #475569;
+      color: #fff;
+      border-color: #94a3b8;
+      transform: scale(0.94);
+    }
+    .dpad-up    { top: 0; left: 43px; width: 40px; height: 44px; border-radius: 8px 8px 0 0; }
+    .dpad-down  { bottom: 0; left: 43px; width: 40px; height: 44px; border-radius: 0 0 8px 8px; }
+    .dpad-left  { left: 0; top: 43px; width: 44px; height: 40px; border-radius: 8px 0 0 8px; }
+    .dpad-right { right: 0; top: 43px; width: 44px; height: 40px; border-radius: 0 8px 8px 0; }
+    .dpad-core  {
+      position: absolute;
+      top: 43px;
+      left: 43px;
+      width: 40px;
+      height: 40px;
+      background: #181d29;
+      border-radius: 4px;
+    }
+
+    /* Elevated Thumbsticks (Moved Up & Inward) */
+    .stick-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* Elevated position relative to bottom edge */
+      margin-top: -10px;
+    }
+    .joystick-outer {
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, #1a202c 0%, #10141d 100%);
+      border: 2px solid #2d3748;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 4px 14px rgba(0,0,0,0.8), 0 6px 16px rgba(0,0,0,0.4);
+      touch-action: none;
+      cursor: grab;
+    }
+    .joystick-outer:active {
+      cursor: grabbing;
+    }
+    .stick-center-deadzone {
+      width: 18px;
+      height: 18px;
+      border: 1.5px dashed rgba(255,255,255,0.15);
+      border-radius: 50%;
+      position: absolute;
+      pointer-events: none;
+    }
+    .joystick-nub {
+      width: 56px;
+      height: 56px;
+      background: radial-gradient(circle at 35% 35%, #3b475d, #1c2230);
+      border: 2px solid #4a5568;
+      border-radius: 50%;
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,255,255,0.15);
+      pointer-events: none;
+      /* Default spring-back transition; dynamically removed during active dragging */
+      transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      will-change: transform;
+    }
+    .stick-telemetry {
+      margin-top: 6px;
+      font-size: 10px;
+      font-family: monospace;
+      color: #64748b;
+    }
+
+    /* Harmonized Face Buttons (All Outline Stroke Styling) */
+    .actions-container {
+      width: 126px;
+      height: 126px;
+      position: relative;
+    }
+    .face-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #1e2433;
+      border: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.06s ease, border-color 0.1s, box-shadow 0.1s;
+    }
+    .face-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      transition: stroke 0.1s;
+    }
+    /* Specific Button Coordinates & Outline Colors */
+    .btn-triangle {
+      top: 0; left: 42px;
+      border-color: rgba(0, 255, 133, 0.3);
+    }
+    .btn-triangle svg { stroke: var(--triangle-green); }
+
+    .btn-circle {
+      right: 0; top: 42px;
+      border-color: rgba(255, 51, 102, 0.3);
+    }
+    .btn-circle svg { stroke: var(--circle-red); }
+
+    .btn-cross {
+      bottom: 0; left: 42px;
+      border-color: rgba(51, 153, 255, 0.3);
+    }
+    .btn-cross svg { stroke: var(--cross-blue); }
+
+    .btn-square {
+      left: 0; top: 42px;
+      border-color: rgba(255, 102, 204, 0.3);
+    }
+    .btn-square svg { stroke: var(--square-pink); }
+
+    /* Instant Tactile Feedback on Press */
+    .face-btn:active, .face-btn.active {
+      transform: scale(0.90);
+      background: #2b354a;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.8), 0 0 12px currentColor;
+    }
+
+    /* Center Proportional Touchpad & Safe Power Control */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+    .utility-bar {
+      width: 210px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .utility-btn {
+      background: #1c2230;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.08s;
+    }
+    .utility-btn:active, .utility-btn.active {
+      background: var(--btn-active);
+      color: #fff;
+      transform: scale(0.95);
+    }
+    .lightbar-glow-strip {
+      width: 76px;
+      height: 5px;
+      background: var(--ps-blue);
+      border-radius: 3px;
+      box-shadow: 0 0 10px var(--ps-blue);
+    }
+
+    /* Proportional Scaled Touchpad */
+    .proportional-touchpad {
+      width: 210px;
+      height: 105px;
+      background: #131722;
+      border: 1.5px solid rgba(0, 102, 255, 0.35);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.2);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      position: relative;
+      cursor: crosshair;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+      touch-action: none;
+      transition: border-color 0.2s;
+    }
+    .proportional-touchpad:active {
+      border-color: var(--ps-light-blue);
+    }
+    .touch-cursor {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0, 200, 255, 0.35);
+      border: 2px solid #fff;
+      pointer-events: none;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Protected Hold-to-Activate PS / Power Button */
+    .safe-power-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .safe-power-btn {
+      width: 44px;
+      height: 44px;
+      position: relative;
+      background: #1c2230;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      touch-action: none;
+    }
+    .power-progress-ring {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 48px;
+      height: 48px;
+      transform: rotate(-90deg);
+      pointer-events: none;
+    }
+    .power-progress-ring circle {
+      fill: none;
+      stroke-width: 3;
+    }
+    .power-progress-bg {
+      stroke: #2d374a;
+    }
+    .power-progress-fill {
+      stroke: var(--ps-light-blue);
+      stroke-linecap: round;
+      stroke-dasharray: 138; /* 2 * PI * 22 */
+      stroke-dashoffset: 138;
+      transition: stroke-dashoffset 0.05s linear;
+    }
+    .ps-icon {
+      width: 20px;
+      height: 20px;
+      fill: #cbd5e1;
+      pointer-events: none;
+      transition: fill 0.15s;
+    }
+    .hold-helper-text {
+      font-size: 9px;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    /* Notification / Toast for Safe Activation */
+    .safe-toast {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: rgba(16, 185, 129, 0.95);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 50;
+    }
+    .safe-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Footer Guidance */
+    .footer-hints {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      gap: 22px;
+    }
+    .footer-hints strong {
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Outer Phone Enclosure -->
+  <div class="phone-container">
+    <div class="lightbar-ambient" id="lightbarAmbient"></div>
+
+    <!-- Header & Telemetry Bar -->
+    <div class="header-bar">
+      <div class="brand-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="6" width="20" height="12" rx="4"></rect>
+          <path d="M6 12h4m-2-2v4m10-2h.01m-3-2h.01"></path>
+        </svg>
+        <span>AirSense</span>
+      </div>
+
+      <!-- Live Telemetry Pill -->
+      <div class="telemetry-pill">
+        <div class="telemetry-item">
+          <div class="pulse-dot"></div>
+          <span>LAN (120 Hz)</span>
+        </div>
+        <div class="telemetry-divider"></div>
+        <div class="telemetry-item">
+          <span>RTT:</span>
+          <span class="rtt-val" id="rttDisplay">2.4 ms</span>
+        </div>
+        <div class="telemetry-divider"></div>
+        <div class="telemetry-item battery-pill">
+          <div class="battery-icon">
+            <div class="battery-fill" id="batteryFill"></div>
+          </div>
+          <span id="batteryText">94%</span>
+        </div>
+      </div>
+
+      <!-- Right Utility Actions -->
+      <div style="font-size: 11px; color: #64748b; font-weight: 600;">
+        DUALSENSE VIRTUAL HUD
+      </div>
+    </div>
+
+    <!-- Gamepad Surface -->
+    <div class="gamepad-body">
+      
+      <!-- LEFT WING -->
+      <div class="control-wing">
+        <!-- Stacked Left Trigger & Bumper -->
+        <div class="stacked-triggers">
+          <div class="trigger-pedal" id="btnL2" title="L2 Trigger (Analog pull)">
+            <div class="gauge-fill" id="gaugeL2"></div>
+            <span>L2</span>
+            <span style="font-size: 10px; color: #64748b;" id="valL2">0%</span>
+          </div>
+          <div class="bumper-bar" id="btnL1" title="L1 Bumper">
+            <span>L1</span>
+          </div>
+        </div>
+
+        <!-- Ergonomic Left Cluster (D-Pad & Elevated Left Stick) -->
+        <div class="cluster-zone">
+          <!-- 4-Way D-Pad -->
+          <div class="dpad-container">
+            <div class="dpad-btn dpad-up" data-btn="dpadUp">▲</div>
+            <div class="dpad-btn dpad-left" data-btn="dpadLeft">◀</div>
+            <div class="dpad-core"></div>
+            <div class="dpad-btn dpad-right" data-btn="dpadRight">▶</div>
+            <div class="dpad-btn dpad-down" data-btn="dpadDown">▼</div>
+          </div>
+
+          <!-- Elevated Left Analog Thumbstick -->
+          <div class="stick-cluster">
+            <div class="joystick-outer" id="stickBaseL">
+              <div class="stick-center-deadzone"></div>
+              <div class="joystick-nub" id="stickNubL">L3</div>
+            </div>
+            <div class="stick-telemetry" id="telemetryL">X: 0 | Y: 0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER CONSOLE -->
+      <div class="center-column">
+        <!-- Meta Navigation -->
+        <div class="utility-bar">
+          <button class="utility-btn" id="btnShare">SHARE</button>
+          <div class="lightbar-glow-strip" id="lightbarStrip"></div>
+          <button class="utility-btn" id="btnOptions">OPTIONS</button>
+        </div>
+
+        <!-- Proportional Scaled Touchpad -->
+        <div class="proportional-touchpad" id="touchpadArea">
+          <span>TOUCHPAD</span>
+          <div class="touch-cursor" id="touchCursor"></div>
+        </div>
+
+        <!-- Protected Hold-to-Activate PS Home Button -->
+        <div class="safe-power-wrapper">
+          <div class="safe-power-btn" id="btnPSHome" title="Hold 1.2s to trigger PS Home">
+            <svg class="power-progress-ring">
+              <circle class="power-progress-bg" cx="24" cy="24" r="22"></circle>
+              <circle class="power-progress-fill" id="psProgressCircle" cx="24" cy="24" r="22"></circle>
+            </svg>
+            <!-- PlayStation Home Logo Icon -->
+            <svg class="ps-icon" viewBox="0 0 24 24">
+              <path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3L12 2z"/>
+            </svg>
+          </div>
+          <span class="hold-helper-text" id="psHelperText">HOLD 1.2s FOR PS</span>
+        </div>
+      </div>
+
+      <!-- RIGHT WING -->
+      <div class="control-wing" style="align-items: flex-end;">
+        <!-- Stacked Right Trigger & Bumper -->
+        <div class="stacked-triggers" style="align-items: flex-end;">
+          <div class="trigger-pedal" id="btnR2" title="R2 Trigger (Analog pull)">
+            <div class="gauge-fill" id="gaugeR2"></div>
+            <span>R2</span>
+            <span style="font-size: 10px; color: #64748b;" id="valR2">0%</span>
+          </div>
+          <div class="bumper-bar" id="btnR1" title="R1 Bumper">
+            <span>R1</span>
+          </div>
+        </div>
+
+        <!-- Ergonomic Right Cluster (Elevated Right Stick & Harmonized Face Buttons) -->
+        <div class="cluster-zone" style="flex-direction: row-reverse;">
+          <!-- Harmonized PlayStation Face Buttons (All Outline Stroke Styling) -->
+          <div class="actions-container">
+            <!-- Triangle (Outline) -->
+            <div class="face-btn btn-triangle" data-btn="triangle" title="Triangle (△)">
+              <svg viewBox="0 0 24 24">
+                <polygon points="12 4 21 20 3 20" />
+              </svg>
+            </div>
+
+            <!-- Circle (Harmonized Outline - NOT a solid dot!) -->
+            <div class="face-btn btn-circle" data-btn="circle" title="Circle (○)">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8" />
+              </svg>
+            </div>
+
+            <!-- Cross (Outline) -->
+            <div class="face-btn btn-cross" data-btn="cross" title="Cross (✕)">
+              <svg viewBox="0 0 24 24">
+                <line x1="5" y1="5" x2="19" y2="19" />
+                <line x1="19" y1="5" x2="5" y2="19" />
+              </svg>
+            </div>
+
+            <!-- Square (Outline) -->
+            <div class="face-btn btn-square" data-btn="square" title="Square (□)">
+              <svg viewBox="0 0 24 24">
+                <rect x="5" y="5" width="14" height="14" rx="2" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Elevated Right Analog Thumbstick -->
+          <div class="stick-cluster">
+            <div class="joystick-outer" id="stickBaseR">
+              <div class="stick-center-deadzone"></div>
+              <div class="joystick-nub" id="stickNubR">R3</div>
+            </div>
+            <div class="stick-telemetry" id="telemetryR">X: 0 | Y: 0</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Protected Activation Notification Toast -->
+    <div class="safe-toast" id="safeToast">✓ PlayStation Home Activated</div>
+  </div>
+
+  <!-- Ergonomic & Physics Guidance -->
+  <div class="footer-hints">
+    <span>🎯 <strong>Analog Physics:</strong> Circular vector clamping with 6% deadzone & exponential power curve</span>
+    <span>🛡️ <strong>Safety:</strong> Center PS button requires 1.2s sustained hold</span>
+    <span>⚡ <strong>Rendering:</strong> Decoupled requestAnimationFrame (120 FPS)</span>
+  </div>
+
+  <script>
+    /* =====================================================================
+       1. ANALOG STICK PHYSICS ENGINE (Vector Clamping + RAF Decoupling)
+       ===================================================================== */
+    class VirtualJoystickEngine {
+      constructor(baseEl, nubEl, telemetryEl, onOutput) {
+        this.baseEl = baseEl;
+        this.nubEl = nubEl;
+        this.telemetryEl = telemetryEl;
+        this.onOutput = onOutput;
+
+        this.maxRadius = 32;       // Maximum radial movement in pixels
+        this.deadzone = 0.06;      // 6% inner deadzone
+        this.powerCurve = 1.45;    // Progressive curve for fine aiming precision
+
+        this.activePointerId = null;
+        this.center = { x: 0, y: 0 };
+        this.targetPos = { x: 0, y: 0 };
+        this.currentPos = { x: 0, y: 0 };
+        this.rafId = null;
+
+        this.init();
+      }
+
+      init() {
+        this.baseEl.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+        window.addEventListener('pointermove', (e) => this.onPointerMove(e));
+        window.addEventListener('pointerup', (e) => this.onPointerUp(e));
+        window.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+      }
+
+      onPointerDown(e) {
+        if (this.activePointerId !== null) return;
+        this.activePointerId = e.pointerId;
+        this.baseEl.setPointerCapture(e.pointerId);
+
+        const rect = this.baseEl.getBoundingClientRect();
+        this.center = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+
+        // Disable CSS transition during active dragging for zero-latency tracking
+        this.nubEl.style.transition = 'none';
+
+        this.processPointer(e.clientX, e.clientY);
+        this.startRenderLoop();
+      }
+
+      onPointerMove(e) {
+        if (e.pointerId !== this.activePointerId) return;
+        this.processPointer(e.clientX, e.clientY);
+      }
+
+      onPointerUp(e) {
+        if (e.pointerId !== this.activePointerId) return;
+        this.activePointerId = null;
+
+        // Apply smooth damped return animation only when released
+        this.nubEl.style.transition = 'transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        this.targetPos = { x: 0, y: 0 };
+        this.currentPos = { x: 0, y: 0 };
+        this.nubEl.style.transform = 'translate3d(0px, 0px, 0px)';
+
+        if (this.telemetryEl) {
+          this.telemetryEl.textContent = 'X: 0 | Y: 0';
+        }
+        if (this.onOutput) {
+          this.onOutput(0, 0);
+        }
+
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+
+      processPointer(clientX, clientY) {
+        const dx = clientX - this.center.x;
+        const dy = clientY - this.center.y;
+
+        // Strict circular vector clamping (r <= maxRadius)
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        const clampedDist = Math.min(dist, this.maxRadius);
+
+        const clampedX = Math.cos(angle) * clampedDist;
+        const clampedY = Math.sin(angle) * clampedDist;
+
+        this.targetPos = { x: clampedX, y: clampedY };
+
+        // Normalized calculations for gamepad output
+        const normDist = clampedDist / this.maxRadius;
+        let outputX = 0;
+        let outputY = 0;
+
+        if (normDist > this.deadzone) {
+          // Remap outside deadzone: 0.0 -> 1.0
+          const remapped = (normDist - this.deadzone) / (1.0 - this.deadzone);
+          // Apply non-linear power curve for refined micro-aiming
+          const curved = Math.pow(remapped, this.powerCurve);
+          outputX = Math.cos(angle) * curved;
+          outputY = -Math.sin(angle) * curved; // Invert Y so up is positive
+        }
+
+        if (this.telemetryEl) {
+          this.telemetryEl.textContent = `X: ${outputX.toFixed(2)} | Y: ${outputY.toFixed(2)}`;
+        }
+        if (this.onOutput) {
+          this.onOutput(outputX, outputY);
+        }
+      }
+
+      startRenderLoop() {
+        if (this.rafId) return;
+        const loop = () => {
+          if (this.activePointerId !== null) {
+            this.currentPos.x = this.targetPos.x;
+            this.currentPos.y = this.targetPos.y;
+            this.nubEl.style.transform = `translate3d(${this.currentPos.x}px, ${this.currentPos.y}px, 0px)`;
+            this.rafId = requestAnimationFrame(loop);
+          }
+        };
+        this.rafId = requestAnimationFrame(loop);
+      }
+    }
+
+    // Initialize Left & Right Thumbsticks
+    new VirtualJoystickEngine(
+      document.getElementById('stickBaseL'),
+      document.getElementById('stickNubL'),
+      document.getElementById('telemetryL'),
+      (x, y) => {}
+    );
+
+    new VirtualJoystickEngine(
+      document.getElementById('stickBaseR'),
+      document.getElementById('stickNubR'),
+      document.getElementById('telemetryR'),
+      (x, y) => {}
+    );
+
+
+    /* =====================================================================
+       2. ACCIDENTAL INPUT PROTECTION (Hold 1.2s for PS / Home Button)
+       ===================================================================== */
+    const psBtn = document.getElementById('btnPSHome');
+    const psProgressCircle = document.getElementById('psProgressCircle');
+    const psHelperText = document.getElementById('psHelperText');
+    const safeToast = document.getElementById('safeToast');
+
+    const circumference = 2 * Math.PI * 22; // ~138.2
+    let holdStartTime = null;
+    let holdTimer = null;
+    let isHolding = false;
+    const requiredHoldMs = 1200; // 1.2 seconds
+
+    function startHold(e) {
+      e.preventDefault();
+      isHolding = true;
+      holdStartTime = performance.now();
+      psBtn.style.transform = 'scale(0.95)';
+
+      function tick(now) {
+        if (!isHolding) return;
+        const elapsed = now - holdStartTime;
+        const progress = Math.min(elapsed / requiredHoldMs, 1.0);
+        
+        // Update circular ring offset
+        const offset = circumference * (1.0 - progress);
+        psProgressCircle.style.strokeDashoffset = offset;
+        psHelperText.textContent = `HOLDING... ${Math.round(progress * 100)}%`;
+        psHelperText.style.color = '#38bdf8';
+
+        if (progress >= 1.0) {
+          triggerSafeActivation();
+        } else {
+          holdTimer = requestAnimationFrame(tick);
+        }
+      }
+      holdTimer = requestAnimationFrame(tick);
+    }
+
+    function cancelHold() {
+      if (!isHolding) return;
+      isHolding = false;
+      cancelAnimationFrame(holdTimer);
+      psProgressCircle.style.strokeDashoffset = circumference;
+      psBtn.style.transform = 'scale(1)';
+      psHelperText.textContent = 'HOLD 1.2s FOR PS';
+      psHelperText.style.color = '#64748b';
+    }
+
+    function triggerSafeActivation() {
+      cancelHold();
+      
+      // Visual actuation celebration
+      safeToast.classList.add('show');
+      if (navigator.vibrate) {
+        navigator.vibrate([40, 60, 40]);
+      }
+      setTimeout(() => {
+        safeToast.classList.remove('show');
+      }, 2200);
+    }
+
+    psBtn.addEventListener('pointerdown', startHold);
+    window.addEventListener('pointerup', cancelHold);
+    window.addEventListener('pointercancel', cancelHold);
+
+
+    /* =====================================================================
+       3. PROPORTIONAL TOUCHPAD INTERACTIONS
+       ===================================================================== */
+    const touchpad = document.getElementById('touchpadArea');
+    const cursor = document.getElementById('touchCursor');
+
+    touchpad.addEventListener('pointerdown', (e) => {
+      touchpad.setPointerCapture(e.pointerId);
+      cursor.style.display = 'block';
+      updateTouch(e);
+    });
+
+    touchpad.addEventListener('pointermove', (e) => {
+      if (e.buttons === 1) updateTouch(e);
+    });
+
+    touchpad.addEventListener('pointerup', (e) => {
+      cursor.style.display = 'none';
+    });
+    touchpad.addEventListener('pointercancel', (e) => {
+      cursor.style.display = 'none';
+    });
+
+    function updateTouch(e) {
+      const rect = touchpad.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      cursor.style.left = `${x}px`;
+      cursor.style.top = `${y}px`;
+    }
+
+
+    /* =====================================================================
+       4. STACKED ANALOG TRIGGERS (L2 & R2)
+       ===================================================================== */
+    function bindTrigger(pedalId, gaugeId, valId) {
+      const pedal = document.getElementById(pedalId);
+      const gauge = document.getElementById(gaugeId);
+      const valEl = document.getElementById(valId);
+      let dragging = false;
+      let startY = 0;
+
+      pedal.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        startY = e.clientY;
+        pedal.setPointerCapture(e.pointerId);
+        update(1.0); // Tap counts as 100% pull
+      });
+
+      pedal.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const delta = Math.max(0, Math.min(e.clientY - startY, 50));
+        const ratio = Math.max(0.2, delta / 50);
+        update(ratio);
+      });
+
+      function release() {
+        if (!dragging) return;
+        dragging = false;
+        update(0);
+      }
+
+      pedal.addEventListener('pointerup', release);
+      pedal.addEventListener('pointercancel', release);
+
+      function update(amt) {
+        const pct = Math.round(amt * 100);
+        gauge.style.width = `${pct}%`;
+        valEl.textContent = `${pct}%`;
+        if (pct > 0) {
+          pedal.classList.add('active');
+        } else {
+          pedal.classList.remove('active');
+        }
+      }
+    }
+    bindTrigger('btnL2', 'gaugeL2', 'valL2');
+    bindTrigger('btnR2', 'gaugeR2', 'valR2');
+
+
+    /* =====================================================================
+       5. TELEMETRY LIVE SIMULATOR (RTT Jitter & Real Battery API)
+       ===================================================================== */
+    const rttDisplay = document.getElementById('rttDisplay');
+    setInterval(() => {
+      // Realistic LAN jitter: 1.8ms to 3.2ms
+      const ping = (1.8 + Math.random() * 1.4).toFixed(1);
+      rttDisplay.textContent = `${ping} ms`;
+    }, 1500);
+
+    // Live Battery API Detection
+    if (navigator.getBattery) {
+      navigator.getBattery().then((battery) => {
+        function updateBattery() {
+          const level = Math.round(battery.level * 100);
+          document.getElementById('batteryText').textContent = `${level}%`;
+          document.getElementById('batteryFill').style.width = `${level}%`;
+        }
+        updateBattery();
+        battery.addEventListener('levelchange', updateBattery);
+      });
+    }
+  </script>
+</body>
+</html>

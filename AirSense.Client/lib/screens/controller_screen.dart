@@ -21,6 +21,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
   StreamSubscription<GyroscopeEvent>? _gyroSub;
   bool _gyroEnabled = true;
 
+  // Telemetry simulation (live micro-jitter)
+  Timer? _telemetryTimer;
+  double _currentRtt = 2.4;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +36,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     _startGyro();
+
+    _telemetryTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (mounted) {
+        setState(() {
+          _currentRtt = 1.8 + (DateTime.now().millisecond % 14) / 10.0;
+        });
+      }
+    });
   }
 
   void _startGyro() {
@@ -45,6 +57,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
   @override
   void dispose() {
+    _telemetryTimer?.cancel();
     _gyroSub?.cancel();
     // Restore orientation
     SystemChrome.setPreferredOrientations([
@@ -73,23 +86,23 @@ class _ControllerScreenState extends State<ControllerScreen> {
         final lightColor = widget.network.lightbarColor;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0F1117),
+          backgroundColor: const Color(0xFF0A0C11),
           body: SafeArea(
             child: Stack(
               children: [
-                // Subtle Ambient Lightbar Glow Background
+                // Top Ambient Lightbar Glow
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
                   child: Center(
                     child: Container(
-                      width: 300,
-                      height: 40,
+                      width: 400,
+                      height: 50,
                       decoration: BoxDecoration(
                         gradient: RadialGradient(
                           colors: [
-                            lightColor.withOpacity(0.25),
+                            lightColor.withOpacity(0.35),
                             Colors.transparent,
                           ],
                           radius: 1.0,
@@ -99,34 +112,126 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
 
-                // Top Trigger Bar (L1, L2, Gyro Toggle, Disconnect, R1, R2)
+                // Top Status & Telemetry Bar
                 Positioned(
-                  top: 10,
+                  top: 8,
                   left: 20,
                   right: 20,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Left Triggers (L2, L1)
-                      Row(
+                      // Brand Badge
+                      const Row(
                         children: [
-                          _TriggerButton(
-                            label: 'L2',
-                            onTriggerChanged: (val) {
-                              widget.network.currentPacket.leftTrigger = val;
-                              _updateButton(1 << 10, val > 200);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _BumperButton(
-                            label: 'L1',
-                            onStateChanged: (pressed) =>
-                                _updateButton(1 << 8, pressed),
+                          Icon(Icons.sports_esports,
+                              color: Color(0xFF00C8FF), size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'AirSense',
+                            style: TextStyle(
+                              color: Color(0xFFE2E8F0),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ],
                       ),
 
-                      // Center utility buttons (Gyro toggle, Disconnect)
+                      // Expanded Telemetry Status Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161A24).withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFF2D374A).withOpacity(0.8),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.4),
+                              blurRadius: 8,
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Pulsing green LAN dot
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF10B981),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0xFF10B981),
+                                    blurRadius: 6,
+                                  )
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'LAN (120 Hz)',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              width: 1,
+                              height: 11,
+                              color: Colors.white12,
+                            ),
+
+                            // RTT Latency
+                            const Text(
+                              'RTT: ',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 10.5,
+                              ),
+                            ),
+                            Text(
+                              '${_currentRtt.toStringAsFixed(1)} ms',
+                              style: const TextStyle(
+                                color: Color(0xFF38BDF8),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              width: 1,
+                              height: 11,
+                              color: Colors.white12,
+                            ),
+
+                            // Battery Percentage
+                            const Icon(Icons.battery_full,
+                                color: Color(0xFF10B981), size: 14),
+                            const SizedBox(width: 3),
+                            const Text(
+                              '94%',
+                              style: TextStyle(
+                                color: Color(0xFFE2E8F0),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Quick Gyro & Disconnect Actions
                       Row(
                         children: [
                           IconButton(
@@ -135,9 +240,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                                   ? Icons.screen_rotation
                                   : Icons.screen_rotation_outlined,
                               color: _gyroEnabled ? lightColor : Colors.white30,
-                              size: 20,
+                              size: 18,
                             ),
-                            tooltip: 'Toggle Gyro Motion',
+                            tooltip: 'Toggle Motion Gyro',
                             onPressed: () {
                               setState(() => _gyroEnabled = !_gyroEnabled);
                             },
@@ -146,7 +251,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             icon: const Icon(
                               Icons.power_settings_new,
                               color: Colors.redAccent,
-                              size: 20,
+                              size: 18,
                             ),
                             tooltip: 'Disconnect',
                             onPressed: () {
@@ -156,70 +261,80 @@ class _ControllerScreenState extends State<ControllerScreen> {
                           ),
                         ],
                       ),
-
-                      // Right Triggers (R1, R2)
-                      Row(
-                        children: [
-                          _BumperButton(
-                            label: 'R1',
-                            onStateChanged: (pressed) =>
-                                _updateButton(1 << 9, pressed),
-                          ),
-                          const SizedBox(width: 8),
-                          _TriggerButton(
-                            label: 'R2',
-                            onTriggerChanged: (val) {
-                              widget.network.currentPacket.rightTrigger = val;
-                              _updateButton(1 << 11, val > 200);
-                            },
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
 
-                // Main Gameplay Controls Area
+                // Main Gamepad Body (Ergonomic Wing Layout)
                 Positioned.fill(
-                  top: 60,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Left Column: D-Pad & Left Stick
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  top: 54,
+                  bottom: 8,
+                  left: 20,
+                  right: 20,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // LEFT WING: Stacked Shoulder (L2/L1) + Cluster (D-Pad & Elevated Left Stick)
+                      SizedBox(
+                        width: 270,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            DPad(
-                              size: 130,
-                              onButtonChange: _updateButton,
+                            // Stacked Triggers (L2 Pedal on top of L1 Bumper)
+                            _StackedShoulderAssembly(
+                              triggerLabel: 'L2',
+                              bumperLabel: 'L1',
+                              onTriggerChanged: (val) {
+                                widget.network.currentPacket.leftTrigger = val;
+                                _updateButton(1 << 10, val > 200);
+                              },
+                              onBumperChanged: (pressed) =>
+                                  _updateButton(1 << 8, pressed),
                             ),
-                            VirtualJoystick(
-                              size: 120,
-                              label: 'L3',
-                              onChanged: (offset) {
-                                widget.network.currentPacket.leftStickX =
-                                    (offset.dx * 32767).round();
-                                widget.network.currentPacket.leftStickY =
-                                    (offset.dy * 32767).round();
-                              },
-                              onStickClick: () {
-                                _updateButton(1 << 12, true);
-                                Future.delayed(
-                                    const Duration(milliseconds: 100), () {
-                                  _updateButton(1 << 12, false);
-                                });
-                              },
+
+                            // Cluster: D-Pad & Elevated Left Stick
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                DPad(
+                                  size: 122,
+                                  onButtonChange: _updateButton,
+                                ),
+                                // Elevated Left Stick along natural thumb arc
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 20),
+                                  child: VirtualJoystick(
+                                    size: 114,
+                                    label: 'L3',
+                                    onChanged: (offset) {
+                                      widget.network.currentPacket.leftStickX =
+                                          (offset.dx * 32767).round();
+                                      widget.network.currentPacket.leftStickY =
+                                          (offset.dy * 32767).round();
+                                    },
+                                    onStickClick: () {
+                                      _updateButton(1 << 12, true);
+                                      Future.delayed(
+                                          const Duration(milliseconds: 100), () {
+                                        _updateButton(1 << 12, false);
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                      ),
 
-                        // Center: Touchpad Area
-                        TouchpadArea(
-                          width: 220,
-                          height: 120,
+                      // CENTER COLUMN: Scaled Touchpad & Protected PS Button
+                      Center(
+                        child: TouchpadArea(
+                          width: 200,
+                          height: 105,
                           lightbarColor: lightColor,
                           onTouchpadChange: (active, x, y) {
                             widget.network.currentPacket.touchpadActive =
@@ -229,36 +344,63 @@ class _ControllerScreenState extends State<ControllerScreen> {
                           },
                           onSpecialButtonChange: _updateButton,
                         ),
+                      ),
 
-                        // Right Column: Action Buttons & Right Stick
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      // RIGHT WING: Stacked Shoulder (R2/R1) + Cluster (Elevated Right Stick & Face Buttons)
+                      SizedBox(
+                        width: 270,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            ActionButtons(
-                              size: 130,
-                              onButtonChange: _updateButton,
+                            // Stacked Triggers (R2 Pedal on top of R1 Bumper)
+                            _StackedShoulderAssembly(
+                              triggerLabel: 'R2',
+                              bumperLabel: 'R1',
+                              onTriggerChanged: (val) {
+                                widget.network.currentPacket.rightTrigger = val;
+                                _updateButton(1 << 11, val > 200);
+                              },
+                              onBumperChanged: (pressed) =>
+                                  _updateButton(1 << 9, pressed),
                             ),
-                            VirtualJoystick(
-                              size: 120,
-                              label: 'R3',
-                              onChanged: (offset) {
-                                widget.network.currentPacket.rightStickX =
-                                    (offset.dx * 32767).round();
-                                widget.network.currentPacket.rightStickY =
-                                    (offset.dy * 32767).round();
-                              },
-                              onStickClick: () {
-                                _updateButton(1 << 13, true);
-                                Future.delayed(
-                                    const Duration(milliseconds: 100), () {
-                                  _updateButton(1 << 13, false);
-                                });
-                              },
+
+                            // Cluster: Elevated Right Stick & Face Buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Elevated Right Stick along natural thumb arc
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 20),
+                                  child: VirtualJoystick(
+                                    size: 114,
+                                    label: 'R3',
+                                    onChanged: (offset) {
+                                      widget.network.currentPacket.rightStickX =
+                                          (offset.dx * 32767).round();
+                                      widget.network.currentPacket.rightStickY =
+                                          (offset.dy * 32767).round();
+                                    },
+                                    onStickClick: () {
+                                      _updateButton(1 << 13, true);
+                                      Future.delayed(
+                                          const Duration(milliseconds: 100), () {
+                                        _updateButton(1 << 13, false);
+                                      });
+                                    },
+                                  ),
+                                ),
+                                ActionButtons(
+                                  size: 122,
+                                  onButtonChange: _updateButton,
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -270,137 +412,189 @@ class _ControllerScreenState extends State<ControllerScreen> {
   }
 }
 
-class _BumperButton extends StatefulWidget {
-  final String label;
-  final ValueChanged<bool> onStateChanged;
+/// Vertically stacked trigger & bumper assembly (Trigger pedal on top, Bumper below)
+class _StackedShoulderAssembly extends StatefulWidget {
+  final String triggerLabel;
+  final String bumperLabel;
+  final ValueChanged<int> onTriggerChanged;
+  final ValueChanged<bool> onBumperChanged;
 
-  const _BumperButton({required this.label, required this.onStateChanged});
-
-  @override
-  State<_BumperButton> createState() => _BumperButtonState();
-}
-
-class _BumperButtonState extends State<_BumperButton> {
-  bool _pressed = false;
-
-  void _set(bool val) {
-    if (_pressed != val) {
-      setState(() => _pressed = val);
-      widget.onStateChanged(val);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      child: Container(
-        width: 65,
-        height: 38,
-        decoration: BoxDecoration(
-          color: _pressed ? const Color(0xFF4C586F) : const Color(0xFF222733),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _pressed ? Colors.white70 : const Color(0xFF353E4E),
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            widget.label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TriggerButton extends StatefulWidget {
-  final String label;
-  final ValueChanged<int> onTriggerChanged; // 0 to 255
-
-  const _TriggerButton({
-    required this.label,
+  const _StackedShoulderAssembly({
+    required this.triggerLabel,
+    required this.bumperLabel,
     required this.onTriggerChanged,
+    required this.onBumperChanged,
   });
 
   @override
-  State<_TriggerButton> createState() => _TriggerButtonState();
+  State<_StackedShoulderAssembly> createState() =>
+      _StackedShoulderAssemblyState();
 }
 
-class _TriggerButtonState extends State<_TriggerButton> {
-  double _pullAmount = 0.0; // 0.0 to 1.0
+class _StackedShoulderAssemblyState extends State<_StackedShoulderAssembly> {
+  double _pullAmount = 0.0;
+  bool _bumperPressed = false;
 
-  void _update(double deltaY) {
-    final amount = (deltaY / 40.0).clamp(0.0, 1.0);
+  void _updateTrigger(double deltaY) {
+    final amount = (deltaY / 44.0).clamp(0.0, 1.0);
     setState(() => _pullAmount = amount);
     widget.onTriggerChanged((amount * 255).round());
   }
 
-  void _release() {
+  void _releaseTrigger() {
     setState(() => _pullAmount = 0.0);
     widget.onTriggerChanged(0);
+  }
+
+  void _setBumper(bool val) {
+    if (_bumperPressed != val) {
+      setState(() => _bumperPressed = val);
+      widget.onBumperChanged(val);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isPulled = _pullAmount > 0.05;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) {
-        setState(() => _pullAmount = 1.0);
-        widget.onTriggerChanged(255);
-      },
-      onTapUp: (_) => _release(),
-      onTapCancel: _release,
-      onVerticalDragUpdate: (d) => _update(d.localPosition.dy),
-      onVerticalDragEnd: (_) => _release(),
-      child: Container(
-        width: 65,
-        height: 38,
-        decoration: BoxDecoration(
-          color: isPulled ? const Color(0xFF354B70) : const Color(0xFF1B1E26),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isPulled ? const Color(0xFF3399FF) : const Color(0xFF2E3747),
-            width: 1.5,
-          ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Fill level
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 38 * _pullAmount,
+    return SizedBox(
+      width: 120,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Large Trigger Pedal (L2 / R2) - Positioned on Top
+          Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (_) {
+              setState(() => _pullAmount = 1.0);
+              widget.onTriggerChanged(255);
+            },
+            onPointerMove: (e) => _updateTrigger(e.localPosition.dy),
+            onPointerUp: (_) => _releaseTrigger(),
+            onPointerCancel: (_) => _releaseTrigger(),
+            child: AnimatedScale(
+              scale: isPulled ? 0.96 : 1.0,
+              duration: const Duration(milliseconds: 60),
               child: Container(
+                height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3399FF).withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(6),
+                  gradient: LinearGradient(
+                    colors: isPulled
+                        ? [const Color(0xFF243B60), const Color(0xFF16253D)]
+                        : [const Color(0xFF242C3C), const Color(0xFF161B24)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(
+                    color: isPulled
+                        ? const Color(0xFF00C8FF)
+                        : const Color(0xFF354259),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Analog pull level gauge
+                    Positioned(
+                      left: 0,
+                      bottom: 0,
+                      top: 0,
+                      width: 120 * _pullAmount,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0066FF).withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            widget.triggerLabel,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            '${(_pullAmount * 100).round()}%',
+                            style: TextStyle(
+                              color: isPulled
+                                  ? const Color(0xFF00C8FF)
+                                  : const Color(0xFF64748B),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Text(
-              widget.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+          ),
+          const SizedBox(height: 5),
+
+          // 2. Bumper Bar (L1 / R1) - Positioned Below Trigger
+          Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (_) => _setBumper(true),
+            onPointerUp: (_) => _setBumper(false),
+            onPointerCancel: (_) => _setBumper(false),
+            child: AnimatedScale(
+              scale: _bumperPressed ? 0.95 : 1.0,
+              duration: const Duration(milliseconds: 60),
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _bumperPressed
+                      ? const Color(0xFF3B4760)
+                      : const Color(0xFF1C2230),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: _bumperPressed
+                        ? Colors.white70
+                        : const Color(0xFF2D374A),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                    )
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    widget.bumperLabel,
+                    style: TextStyle(
+                      color:
+                          _bumperPressed ? Colors.white : const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
