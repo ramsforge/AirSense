@@ -58,8 +58,23 @@ jobs:
         cd AirSense.Client
         flutter create . --project-name air_sense_client --org com.airsense.controller --platforms=android
 
-    - name: Add Permissions to AndroidManifest
+    - name: Configure Pre-installed NDK and Permissions
       run: |
+        # Use pre-installed NDK from GitHub Actions runner environment to prevent network timeout/corrupt zip
+        PREINSTALLED_NDK=$(ls /usr/local/lib/android/sdk/ndk/ | sort -V | tail -n 1)
+        echo "Detected pre-installed Android NDK: $PREINSTALLED_NDK"
+        
+        # Configure ndkVersion in build.gradle.kts or build.gradle
+        if [ -f AirSense.Client/android/app/build.gradle.kts ]; then
+          sed -i "s/ndkVersion = flutter.ndkVersion/ndkVersion = \"$PREINSTALLED_NDK\"/g" AirSense.Client/android/app/build.gradle.kts
+        elif [ -f AirSense.Client/android/app/build.gradle ]; then
+          sed -i "s/ndkVersion flutter.ndkVersion/ndkVersion \"$PREINSTALLED_NDK\"/g" AirSense.Client/android/app/build.gradle
+        fi
+
+        # Disable Gradle auto-download of NDK to avoid corrupted archives
+        echo "android.builder.sdkDownload=false" >> AirSense.Client/android/gradle.properties
+
+        # Inject networking & vibration permissions into AndroidManifest.xml
         sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
 
     - name: Install Client Dependencies
@@ -91,8 +106,8 @@ jobs:
         name: "AirSense Android APK Release (v1.0.0)"
         body: |
           ### AirSense Mobile Controller for Android
-          - **Direct Download:** Tap [`AirSense-v1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.0.0-apk/AirSense-v1.0.apk) below.
-          - **Installation:** Open the downloaded `.apk` on your phone and allow installation.
+          - **Direct Download:** Tap [`AirSense-v1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.0.0-apk/AirSense-v1.0.apk) to install.
+          - **Installation:** Open the downloaded `.apk` on your Android phone and tap Install.
           - **Connect:** Ensure your phone is connected to the same Wi-Fi as your PC, start `AirSense.Server.exe`, and tap Connect!
         files: |
           ./release-apk/AirSense-v1.0.apk
