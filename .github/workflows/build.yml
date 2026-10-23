@@ -3,8 +3,10 @@ name: AirSense CI/CD
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-server:
@@ -48,9 +50,17 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.x'
         channel: 'stable'
         cache: true
+
+    - name: Scaffold Android Project Runner
+      run: |
+        cd AirSense.Client
+        flutter create . --project-name air_sense_client --org com.airsense.controller --platforms=android
+
+    - name: Add Permissions to AndroidManifest
+      run: |
+        sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"\/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' AirSense.Client/android/app/src/main/AndroidManifest.xml
 
     - name: Install Client Dependencies
       run: |
@@ -60,4 +70,31 @@ jobs:
     - name: Build Android APK
       run: |
         cd AirSense.Client
-        flutter build apk --release || echo "APK build requires full Android project configuration"
+        flutter build apk --release --no-tree-shake-icons
+
+    - name: Prepare APK Output
+      run: |
+        mkdir -p ./release-apk
+        cp AirSense.Client/build/app/outputs/flutter-apk/app-release.apk ./release-apk/AirSense-v1.0.apk
+
+    - name: Upload Android APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AirSense-Android-APK
+        path: ./release-apk/AirSense-v1.0.apk
+
+    - name: Publish to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      if: github.ref == 'refs/heads/main'
+      with:
+        tag_name: v1.0.0-apk
+        name: "AirSense Android APK Release (v1.0.0)"
+        body: |
+          ### AirSense Mobile Controller for Android
+          - **Direct Download:** Tap [`AirSense-v1.0.apk`](https://github.com/ramsforge/AirSense/releases/download/v1.0.0-apk/AirSense-v1.0.apk) below.
+          - **Installation:** Open the downloaded `.apk` on your phone and allow installation.
+          - **Connect:** Ensure your phone is connected to the same Wi-Fi as your PC, start `AirSense.Server.exe`, and tap Connect!
+        files: |
+          ./release-apk/AirSense-v1.0.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:vibration/vibration.dart';
+import 'package:flutter/services.dart';
 import '../models/packet.dart';
 
 class NetworkService extends ChangeNotifier {
@@ -100,12 +100,13 @@ class NetworkService extends ChangeNotifier {
 
   void _handleRumble(int largeMotor, int smallMotor) {
     if (largeMotor > 0 || smallMotor > 0) {
-      final intensity = (largeMotor > smallMotor ? largeMotor : smallMotor);
-      Vibration.hasVibrator().then((hasVib) {
-        if (hasVib == true) {
-          Vibration.vibrate(duration: 80, amplitude: intensity);
-        }
-      });
+      if (largeMotor > 150) {
+        HapticFeedback.heavyImpact();
+      } else if (largeMotor > 50 || smallMotor > 80) {
+        HapticFeedback.mediumImpact();
+      } else {
+        HapticFeedback.lightImpact();
+      }
     }
   }
 
